@@ -50,6 +50,7 @@ __all__ = [
     "history",
     "onset",
     "psf",
+    "seen",
 ]
 
 dates_psf: tuple[datetime.date, ...] = (
@@ -433,6 +434,27 @@ def fit(date: datetime.date) -> Leak:
 def history() -> list[Leak]:
     """The leak in every eclipse of :data:`aia_94_leak_paper.eclipses.dates`."""
     return [fit(date) for date in aia_94_leak_paper.eclipses.dates]
+
+
+def seen(date: datetime.date) -> na.ScalarArray:
+    """
+    The leak of one eclipse with the whole disk up, through the point spread
+    function, per second, on the bins of the archive.
+
+    Parameters
+    ----------
+    date
+        A day of :data:`aia_94_leak_paper.eclipses.dates`.
+    """
+    eclipse = aia_94_leak_paper.eclipses.load(date)
+    leak = fit(date)
+    position = eclipse.position
+    r = np.sqrt(np.square(position.x) + np.square(position.y))
+    mu = np.sqrt(np.clip(1 - np.square(r), 0, 1))
+    disk = np.where(r < 1, 1 - leak.limb_darkening * (1 - mu), 0)
+    axes = ("y", "x")
+    image = psf()(disk.ndarray_aligned(axes), eclipse.radius)
+    return na.ScalarArray(image, axes=axes) * leak.amplitude
 
 
 @dataclasses.dataclass(frozen=True)

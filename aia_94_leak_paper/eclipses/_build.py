@@ -13,11 +13,11 @@ square bins. Each day is written to a FITS file of its own.
 import datetime
 import importlib.metadata
 import pathlib
-import time
-import urllib.request
 
 import numpy as np
 from astropy.io import fits
+
+from .. import _jsoc
 
 __all__ = [
     "binning",
@@ -31,29 +31,6 @@ binning: int = 16
 
 channels: tuple[int, ...] = (94, 171)
 """The wavelengths of the channels in the archive, in angstroms."""
-
-_jsoc = "http://jsoc.stanford.edu"
-
-_series = "aia.lev1_euv_12s"
-
-
-def _retry(function, what: str, attempts: int = 5):
-    """Call a function, retrying when JSOC times out or refuses."""
-    for attempt in range(attempts):
-        try:
-            return function()
-        # JSOC fails in many ways: timeouts, refused connections, HTTP errors,
-        # and the query errors of `drms`, all of which are worth a retry.
-        except Exception as e:  # noqa: BLE001
-            print(f"{what}: {e!r}, retrying", flush=True)
-            time.sleep(5 * (attempt + 1))
-    raise RuntimeError(f"{what} failed {attempts} times")
-
-
-def _client():
-    import drms
-
-    return drms.Client()
 
 
 def ingress(date: datetime.date) -> tuple[np.datetime64, np.datetime64]:
@@ -69,9 +46,9 @@ def ingress(date: datetime.date) -> tuple[np.datetime64, np.datetime64]:
     date
         A day of an eclipse season.
     """
-    query = f"{_series}[{date:%Y-%m-%d}T05:30:00Z/180m][171]"
-    keys = _retry(
-        lambda: _client().query(query, key="T_OBS,DATAMEAN,EXPTIME"),
+    query = f"{_jsoc.series}[{date:%Y-%m-%d}T05:30:00Z/180m][171]"
+    keys = _jsoc.retry(
+        lambda: _jsoc.client().query(query, key="T_OBS,DATAMEAN,EXPTIME"),
         what=query,
     )
     keys = keys[keys.EXPTIME.astype(float) > 0.1]
@@ -88,54 +65,6 @@ def ingress(date: datetime.date) -> tuple[np.datetime64, np.datetime64]:
     start = falling[0]
     gone = start + np.flatnonzero(rate[start:] < 0.01 * before)[0]
     return t[start], t[gone]
-
-
-def _records(start: np.datetime64, seconds: int, channel: int) -> list[dict]:
-    """The images of a channel observed in a window, with the path of each at JSOC."""
-    query = (
-        f"{_series}[{np.datetime_as_string(start, unit='s')}Z/{seconds}s][{channel}]"
-    )
-    keys, segments = _retry(
-        lambda: _client().query(
-            query,
-            key="T_OBS,WAVELNTH,EXPTIME,FLAT_REC,FSN,QUALITY",
-            seg="image",
-        ),
-        what=query,
-    )
-    result = []
-    for (_, k), (_, s) in zip(keys.iterrows(), segments.iterrows()):
-        if int(k.WAVELNTH) != channel:
-            raise ValueError(f"{query} returned {k.WAVELNTH} A")
-        if float(k.EXPTIME) < 0.1 or "SUM" not in str(s.image):
-            continue
-        result.append(dict(k) | {"path": s.image})
-    return result
-
-
-def _fetch(url: str, path: pathlib.Path) -> pathlib.Path:
-    """A file, downloaded unless it is already there."""
-    if not path.exists():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        data = _retry(
-            lambda: urllib.request.urlopen(url, timeout=120).read(),
-            what=url,
-        )
-        path.with_suffix(".part").write_bytes(data)
-        path.with_suffix(".part").replace(path)
-    return path
-
-
-def _flat(record: str, flats: pathlib.Path) -> np.ndarray:
-    """The flat field named by the ``FLAT_REC`` keyword of an image."""
-    path = flats / record.replace("aia.flatfield[:#", "flat_").replace("]", ".fits")
-    if not path.exists():
-        _, segments = _retry(
-            lambda: _client().query(record, key="WAVELNTH", seg="flatfield"),
-            what=record,
-        )
-        _fetch(_jsoc + segments.flatfield.iloc[0], path)
-    return fits.getdata(path).astype(np.float32)
 
 
 def build(
@@ -176,21 +105,19 @@ def build(
     header = None
     for channel in channels:
         for group, (begin, seconds) in windows.items():
-            records = sorted(
-                _records(begin, seconds, channel), key=lambda r: r["T_OBS"]
-            )
+            records = _jsoc.records(begin, seconds, channel)
             images, rows = [], []
             for record in records:
                 stamp = record["T_OBS"][:19].replace(":", "").replace("-", "")
                 name = f"aia{channel}_{stamp}.fits"
-                path = have.get(name) or _fetch(
-                    _jsoc + record["path"], day / str(channel) / name
+                path = have.get(name) or _jsoc.fetch(
+                    record["image"], day / str(channel) / name
                 )
                 with fits.open(path) as hdul:
                     h = hdul[1].header
                     image = hdul[1].data.astype(np.float32)
                 if channel == 94:
-                    image = image * _flat(h["FLAT_REC"], flats)
+                    image = image * _jsoc.flat(h["FLAT_REC"], flats)
                 if header is None:
                     header = h
                 n = 4096 // binning

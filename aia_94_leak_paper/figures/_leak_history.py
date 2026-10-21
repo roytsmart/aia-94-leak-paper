@@ -39,6 +39,31 @@ def leak_history() -> aastex.Figure:
         markersize=4,
         label=r"1.05--1.15\,$R_\odot$",
     )
+    # the noise where it measures the leak, with its spread among the quadrants,
+    # and open where the leak is too faint for it
+    noise = aia_94_leak_paper.noise.history()
+    measured = np.array(aia_94_leak_paper.noise.measured(noise, leaks))
+    noise_year = np.array([n.time.decimalyear for n in noise])
+    noise_rate = u.Quantity([n.rate for n in noise]).to_value(rate)
+    noise_spread = u.Quantity([n.spread / n.exposure for n in noise]).to_value(rate)
+    ax.errorbar(
+        noise_year[measured],
+        noise_rate[measured],
+        yerr=noise_spread[measured],
+        fmt="^",
+        color="tab:blue",
+        markersize=4,
+        elinewidth=0.6,
+        label="noiseless, disk center",
+    )
+    ax.plot(
+        noise_year[~measured],
+        noise_rate[~measured],
+        "^",
+        color="tab:blue",
+        markerfacecolor="none",
+        markersize=4,
+    )
     t = np.linspace(growth.since, year.max(), 100)
     ax.plot(
         t, growth(t).to_value(rate), color="black", linewidth=0.8, label="exponential"
@@ -48,7 +73,7 @@ def leak_history() -> aastex.Figure:
     ax.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(2))
     ax.set_xlabel("year")
     ax.set_ylabel(f"leak ({rate:latex_inline})")
-    ax.legend(fontsize=7, loc="upper left")
+    ax.legend(fontsize=7, loc="lower right")
 
     result = aastex.Figure("fig:leakHistory", position="!htb")
     result.append(aastex.NoEscape(r"\centering"))
@@ -56,7 +81,10 @@ def leak_history() -> aastex.Figure:
     result.add_caption(
         aastex.NoEscape(r"""
 The leak in the \numEclipses\ eclipse ingresses, in the units of the detector, at disk center
-(filled) and just off the limb (open), each with the whole disk up.
+(filled circles) and just off the limb (open circles), each with the whole disk up, and the
+noiseless signal near disk center in a run at noon of each day (triangles), with its spread among
+the quadrants of the detector; it is open where the leak is less than three times the typical
+spread, \noiseSpread, and the noise does not measure it.
 The line is an exponential fit to the eclipses since \yearOnset, which doubles every
 \doublingTime.""")
     )
