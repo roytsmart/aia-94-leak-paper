@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# tooling caches
+.pytest_cache/
+.ruff_cache/
+.cache/
+
+# editors
+.idea/
+.vscode/
+.ipynb_checkpoints/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+
+# The generated article and its figures, which aastex writes next to the
+# .tex file. Both are reproducible by running `aia_94_leak_paper.pdf()`, so
+# neither is committed. Static figures that are not generated belong in a
+# subdirectory (e.g. `figures/static/`) so that they are not ignored here.
+aia_94_leak_paper/aia-94-leak.tex
+aia_94_leak_paper/*.pdf
+aia_94_leak_paper/*.png
+
+# The AASTeX class, bibliography style, and ORCID logo, which aastex copies
+# next to the .tex file at build time and leaves there when the .tex is kept.
+aia_94_leak_paper/aastex*.cls
+aia_94_leak_paper/aasjournal*.bst
+
+# submission archives built by `aastex.Document.generate_archive()`
+*.zip
+*.tar.gz

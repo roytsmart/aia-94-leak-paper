@@ -1,0 +1,39 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build and check the article
+    steps:
+      - name: Install LaTeX
+        # `apt-get` waits forever if another process on the runner holds the
+        # dpkg lock, so bound that wait and answer its prompts non-interactively.
+        # The index the runner ships with goes stale, and installing against a
+        # stale one asks the mirror for versions it has since replaced.
+        run: >-
+          sudo apt-get update -o DPkg::Lock::Timeout=300 &&
+          sudo apt-get install -y -o DPkg::Lock::Timeout=300
+          texlive-publishers texlive-science cm-super latexmk dvipng
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[test]
+      - name: Test with pytest
+        run: pytest
+      - name: Upload the article
+        uses: actions/upload-artifact@v7
+        with:
+          name: article
+          path: aia_94_leak_paper/aia-94-leak.pdf
+          if-no-files-found: error

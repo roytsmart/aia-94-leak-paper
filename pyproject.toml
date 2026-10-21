@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aia-94-leak-paper"
+authors = [
+    {name = "Roy T. Smart", email = "roytsmart@gmail.com"},
+]
+description = "An AAS journal article on a growing visible light leak in the 94 Å channel of the Atmospheric Imaging Assembly."
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "pylatex~=1.4",
+    "aastex~=0.9",
+    "matplotlib",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pymupdf",
+]
+
+[project.urls]
+Homepage = "https://github.com/roytsmart/aia-94-leak-paper"
+
+[tool.setuptools.packages.find]
+include = ["aia_94_leak_paper*"]
+
+[tool.setuptools.package-data]
+aia_94_leak_paper = ["*.bib"]
+
+[tool.setuptools_scm]
