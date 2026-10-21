@@ -29,7 +29,9 @@ import numpy as np
 import aia_94_leak_paper
 
 __all__ = [
+    "Disk",
     "Noise",
+    "disk",
     "fit",
     "history",
     "measured",
@@ -53,6 +55,12 @@ _signal = (2, 20) * u.DN
 
 _count = 3000
 """The fewest residuals a bin of signal needs to be fit."""
+
+_disk = 0.95
+"""
+Regions within this distance of the center of the disk are fit by
+:func:`disk`; nearer the limb the regions straddle it.
+"""
 
 
 def quadrants(run: "aia_94_leak_paper.noise.Run") -> list[na.ScalarArray]:
@@ -242,6 +250,80 @@ def noiseless(date: datetime.date) -> na.ScalarArray:
             (run.variance - slope * run.signal * u.DN) * weight
         ).sum("signal") / weight.sum("signal")
     return (read - intercept) / slope / u.DN
+
+
+@dataclasses.dataclass(frozen=True)
+class Disk:
+    """
+    The map of the noiseless signal of one run, fit as a limb-darkened disk
+    plus a part that grows with the 94 Å signal of each region,
+
+    .. math::
+
+        p = A \\left[ 1 - u (1 - \\mu) \\right] + k (S - \\bar{S}),
+
+    where :math:`\\mu` is the cosine of the angle from disk center and
+    :math:`\\bar{S}` is the median signal of the regions fit. If the
+    noiseless signal were a part of the 94 Å signal, :math:`k` would be
+    that part; if it is light from the photosphere, :math:`k` is zero and
+    :math:`u` is the limb darkening of the photosphere.
+    """
+
+    date: datetime.date
+    """The day of the run."""
+
+    amplitude: u.Quantity
+    """The noiseless signal at disk center at the median signal, :math:`A`."""
+
+    limb_darkening: float
+    """The coefficient :math:`u`."""
+
+    per_signal: float
+    """How much the noiseless signal grows per DN of the signal of a region, :math:`k`."""
+
+    signal: u.Quantity
+    """The median signal of the regions fit, :math:`\\bar{S}`."""
+
+    def __call__(self, r: np.ndarray) -> u.Quantity:
+        """
+        The limb-darkened disk at the median signal.
+
+        Parameters
+        ----------
+        r
+            The distance from the center of the disk, in solar radii.
+        """
+        mu = np.sqrt(np.clip(1 - np.square(r), 0, 1))
+        return self.amplitude * (1 - self.limb_darkening * (1 - mu))
+
+
+def disk(date: datetime.date) -> Disk:
+    """
+    Fit the map of the noiseless signal of one run, short of the limb, as a
+    limb-darkened disk plus a part that grows with the 94 Å signal.
+
+    Parameters
+    ----------
+    date
+        A day of :data:`aia_94_leak_paper.eclipses.dates`.
+    """
+    run = aia_94_leak_paper.noise.load(date)
+    axes = ("y", "x")
+    r = run.r.ndarray_aligned(axes)
+    p = noiseless(date).to_value(u.DN).ndarray_aligned(axes)
+    s = run.image.to_value(u.DN).ndarray_aligned(axes)
+    use = (r < _disk) & np.isfinite(p)
+    median = np.median(s[use])
+    mu = np.sqrt(1 - np.square(r[use]))
+    design = np.stack([np.ones(use.sum()), mu, s[use] - median], axis=-1)
+    (a, b, k), *_ = np.linalg.lstsq(design, p[use], rcond=None)
+    return Disk(
+        date=date,
+        amplitude=(a + b) * u.DN,
+        limb_darkening=float(b / (a + b)),
+        per_signal=float(k),
+        signal=median * u.DN,
+    )
 
 
 def history() -> list[Noise]:

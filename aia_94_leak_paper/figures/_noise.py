@@ -16,7 +16,8 @@ __all__ = [
 def noise() -> aastex.FigureStar:
     """
     The variance of 94 Å against its signal near disk center and off the
-    limb in one run, and the map of the noiseless signal.
+    limb in one run, and the map of the noiseless signal and its radial
+    profile.
     """
     date = aia_94_leak_paper.figures.date_ingress
     module = aia_94_leak_paper.noise
@@ -100,46 +101,46 @@ def noise() -> aastex.FigureStar:
     bar = fig.colorbar(im, ax=middle, shrink=0.85)
     bar.set_label("$p$ (DN)")
 
-    # its radial profile, against the leak measured in the eclipse of the same day,
-    # both per second
-    edges = np.arange(0, 1.41, 0.05)
-    mids = (edges[:-1] + edges[1:]) / 2
-    rate = u.DN / u.s
-
-    def profile(values: np.ndarray, radius: np.ndarray) -> list[float]:
-        """The median of the finite values in each ring, or nothing if there are none."""
-        result = []
-        for lo, hi in itertools.pairwise(edges):
-            ring = values[(radius >= lo) & (radius < hi)]
-            ring = ring[np.isfinite(ring)]
-            result.append(np.median(ring) if ring.size else np.nan)
-        return result
-
-    exposure = result.exposure.to_value(u.s)
+    # its radial profile, each region and the median of each ring, against
+    # the limb-darkened disk fit to the map
     radius = r.ndarray_aligned(("y", "x"))
     right.plot(
-        mids,
-        np.array(profile(image, radius)) / exposure,
+        radius.ravel(),
+        image.ravel(),
+        ".",
+        color="0.7",
+        markersize=1,
+        label="regions",
+    )
+    edges = np.arange(0, 1.001, 0.05)
+    rings = []
+    for lo, hi in itertools.pairwise(edges):
+        ring = image[(radius >= lo) & (radius < hi)]
+        ring = ring[np.isfinite(ring)]
+        rings.append(np.median(ring) if ring.size else np.nan)
+    right.plot(
+        (edges[:-1] + edges[1:]) / 2,
+        rings,
         "o",
         color="tab:red",
         markersize=3,
-        label="noiseless signal",
+        label="median of each ring",
     )
-    eclipse = aia_94_leak_paper.eclipses.load(date)
-    position = eclipse.position
-    radius = np.sqrt(np.square(position.x) + np.square(position.y))
-    seen = aia_94_leak_paper.eclipses.seen(date).to_value(rate)
+    fitted = module.disk(date)
+    t = np.linspace(0, 1, 200)
     right.plot(
-        mids,
-        profile(seen.ndarray_aligned(("y", "x")), radius.ndarray_aligned(("y", "x"))),
+        t,
+        fitted(t).to_value(u.DN),
         color="black",
         linewidth=0.8,
-        label="eclipse",
+        label="limb-darkened disk",
     )
     right.axhline(0, color="gray", linewidth=0.5)
+    right.set_xlim(0, 1)
+    right.set_ylim(-0.5, 3.5)
     right.set_xlabel(r"radius ($R_\odot$)")
-    right.set_ylabel(f"leak ({rate:latex_inline})")
-    right.legend(fontsize=7)
+    right.set_ylabel("$p$ (DN)")
+    right.legend(fontsize=7, loc="lower left")
 
     result_figure = aastex.FigureStar("fig:noise", position="!htb")
     result_figure.append(aastex.NoEscape(r"\centering"))
@@ -157,6 +158,8 @@ slope; the line and the read noise shown are their means, and the uncertainty of
 among the quadrants.
 Middle: $p$ in each region of $64 \times 64$ pixels on the disk, with the read noise and the slope of
 its quadrant; off the limb the slope of the disk does not hold.
-Right: its radial profile per second, against the leak measured in the eclipse of the same day.""")
+Right: its radial profile, each region (gray) and the median of each ring of $0.05\,R_\odot$ (red),
+with a limb-darkened disk, $1 - u (1 - \mu)$ with $u = \noiseLimbDarkening$, fit to the regions within
+$0.95\,R_\odot$.""")
     )
     return result_figure

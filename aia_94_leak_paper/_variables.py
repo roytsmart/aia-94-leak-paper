@@ -47,6 +47,7 @@ def variables() -> list[aastex.Variable]:
     first, last = leaks[0], leaks[-1]
     fraction = (last.center / last.quiet).to_value(u.percent)
     noise = aia_94_leak_paper.noise.fit(date_ingress)
+    disk = aia_94_leak_paper.noise.disk(date_ingress)
     # the noise method measures the leak once the leak is three times the
     # typical spread of the method among the quadrants of the detector
     history = aia_94_leak_paper.noise.history()
@@ -107,6 +108,27 @@ def variables() -> list[aastex.Variable]:
         aastex.Variable(name="noiselessCenter", value=_significant(noise.noiseless)),
         aastex.Variable(
             name="noiselessSpread", value=_significant(noise.spread, digits=1)
+        ),
+        # the map of the noiseless signal on that day: its limb darkening, how
+        # much it grows per DN of the 94 Å signal of a region, and the part of
+        # that signal it is at disk center
+        aastex.Variable(
+            name="noiseLimbDarkening",
+            value=aastex.NoEscape(
+                rf"\ensuremath{{{_significant(disk.limb_darkening * u.one).value:g}}}"
+            ),
+        ),
+        aastex.Variable(
+            name="noisePerSignal",
+            value=aastex.NoEscape(
+                rf"\ensuremath{{{_significant(disk.per_signal * u.one, digits=1).value:g}}}"
+            ),
+        ),
+        aastex.Variable(
+            name="noiseShare",
+            value=aastex.NoEscape(
+                rf"{_significant((disk.amplitude / disk.signal).to(u.percent)).value:g}\%"
+            ),
         ),
         # the typical spread of the noise method among the quadrants, and how
         # its noiseless signal compares with the eclipses once the leak is

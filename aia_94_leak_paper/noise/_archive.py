@@ -140,6 +140,14 @@ class Run:
         position = self.position
         return np.sqrt(np.square(position.x) + np.square(position.y))
 
+    @property
+    def image(self) -> na.ScalarArray:
+        """The mean signal of each region, over all its bins of signal."""
+        with np.errstate(divide="ignore", invalid="ignore"):
+            return np.nan_to_num(self.signal * self.count).sum(
+                "signal"
+            ) / self.count.sum("signal")
+
 
 def load(date: datetime.date, directory: None | pathlib.Path = None) -> Run:
     """

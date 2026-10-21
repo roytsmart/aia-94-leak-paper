@@ -6,7 +6,9 @@ carries no photon noise.
 from ._archive import Run, archive, load, sha256, url, version
 from ._build import build, edges, frames, region
 from ._model import (
+    Disk,
     Noise,
+    disk,
     fit,
     history,
     measured,
@@ -17,10 +19,12 @@ from ._model import (
 )
 
 __all__ = [
+    "Disk",
     "Noise",
     "Run",
     "archive",
     "build",
+    "disk",
     "edges",
     "fit",
     "frames",

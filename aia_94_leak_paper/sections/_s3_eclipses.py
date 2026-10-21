@@ -28,6 +28,16 @@ def eclipses() -> aastex.Section:
     \leakFirst\ to \leakLast, with a doubling time of \doublingTime\ since \yearOnset\
     (Figure~\ref{fig:leakHistory}).
     Its limb darkening, the sharpness of its limb, and the halo beyond it.
+\item \textbf{Against the noise.}
+    The noiseless signal near disk center in the run at noon of each day follows the leak
+    (Figure~\ref{fig:leakHistory}).
+    Since \yearNoise, when the leak first exceeded three times the spread of the noise method among
+    the quadrants (\noiseSpread), the noiseless signal is \noiseRatioMin\ to \noiseRatioMax\ of the
+    leak, the fraction falling as the leak grows; before, the two differ by up to a factor of two.
+    Part of the shortfall is expected: a visible photon frees one electron, so the leak does carry
+    a little photon noise, a twentieth of what an \EUV\ signal of the same size would.
+    \roy{Account for the rest: the rise of the variance per DN with signal, the step in the
+    noiseless signal between the quadrants, and the change of the read noise in 2018.}
 \item \textbf{Caveats.}
     The \PSF\ is fit once to the brightest eclipses and held fixed, since in a single eclipse its
     core and wing trade off against each other, though the light they deliver to the disk does not.
