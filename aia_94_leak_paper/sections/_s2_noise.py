@@ -34,8 +34,13 @@ def noise() -> aastex.Section:
     and does not follow the corona: across the disk it grows by \noisePerSignal\ per DN of the
     94\,\AA\ signal of a region, though it is \noiseShare\ of that signal.
     It darkens toward the limb as $1 - u (1 - \mu)$ with $u = \noiseLimbDarkening$
-    (Figure~\ref{fig:noise}, right), as the optically thick photosphere does and the optically thin
-    corona does not.
+    (Figure~\ref{fig:noise}, right), where $\mu = \sqrt{1 - r^2}$ is the cosine of the angle between
+    the line of sight and the vertical.
+    This is limb darkening, the signature of an optically thick photosphere: we see into it only to
+    a fixed optical depth along the line of sight, which near the limb, at a grazing angle, lies in
+    higher and cooler layers, so the disk dims toward its edge.
+    The optically thin corona does the opposite, brightening toward the limb, where the line of sight
+    through it is longest.
     The channel sees the photosphere, in light that frees few electrons per photon: a visible light
     leak.
     \roy{Cite a measured limb darkening of the photosphere in visible light (\eg, Neckel and Labs

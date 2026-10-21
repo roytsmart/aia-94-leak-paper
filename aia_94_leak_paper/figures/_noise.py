@@ -150,14 +150,14 @@ def noise() -> aastex.FigureStar:
         fitted(t).to_value(u.DN),
         color="black",
         linewidth=0.8,
-        label="limb-darkened disk",
+        label=r"photosphere, $1 - u (1 - \mu)$",
     )
     right.axhline(0, color="gray", linewidth=0.5)
     right.set_xlim(0, 1)
     right.set_ylim(-0.5, 3.5)
     right.set_xlabel(r"radius ($R_\odot$)")
     right.set_ylabel("$p$ (DN)")
-    right.legend(fontsize=7, loc="lower left")
+    right.legend(fontsize=7, loc="lower left", handlelength=1.2, borderaxespad=0.3)
 
     result_figure = aastex.FigureStar("fig:noise", position="!htb")
     result_figure.append(aastex.NoEscape(r"\centering"))
@@ -179,7 +179,8 @@ among the quadrants.
 Middle: $p$ in each region of $64 \times 64$ pixels on the disk, with the read noise and the slope of
 its quadrant; off the limb the slope of the disk does not hold.
 Right: its radial profile, each region (gray) and the median of each ring of $0.05\,R_\odot$ (red),
-with a limb-darkened disk, $1 - u (1 - \mu)$ with $u = \noiseLimbDarkening$, fit to the regions within
-$0.95\,R_\odot$.""")
+with the limb darkening of a photosphere, $1 - u (1 - \mu)$, where $\mu = \sqrt{1 - r^2}$ is the cosine
+of the angle between the line of sight and the vertical, fit to the regions within $0.95\,R_\odot$:
+$u = \noiseLimbDarkening$.""")
     )
     return result_figure
