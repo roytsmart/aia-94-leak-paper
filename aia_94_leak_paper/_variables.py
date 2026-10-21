@@ -1,4 +1,6 @@
 import aastex
+import astropy.units as u
+import numpy as np
 
 import aia_94_leak_paper
 
@@ -21,6 +23,14 @@ def _pending(name: str) -> aastex.Variable:
     return aastex.Variable(name=name, value=aastex.NoEscape(r"\textbf{XX}"))
 
 
+def _significant(value: u.Quantity, digits: int = 2) -> u.Quantity:
+    """A quantity rounded to some significant figures, which is all a measurement here supports."""
+    if value.value == 0:
+        return value
+    decimals = digits - 1 - int(np.floor(np.log10(abs(value.value))))
+    return np.round(value, decimals)
+
+
 def variables() -> list[aastex.Variable]:
     """
     A list of LaTeX variables for every numeric quantity cited in the prose.
@@ -28,20 +38,39 @@ def variables() -> list[aastex.Variable]:
     Reference these macros in section strings instead of hardcoding numbers so
     that the text stays in sync with the analysis.
     """
-    dates = aia_94_leak_paper.eclipses.dates
+    eclipses = aia_94_leak_paper.eclipses
+    dates = eclipses.dates
+    leaks = eclipses.history()
+    growth = eclipses.growth(leaks)
+    rate = (u.DN, u.s**-1)
+    first, last = leaks[0], leaks[-1]
+    fraction = (last.center / last.quiet).to_value(u.percent)
     return [
         # the eclipses the leak is measured in, and the years they span
         aastex.Variable(name="numEclipses", value=len(dates)),
         aastex.Variable(name="yearFirst", value=min(dates).year),
         aastex.Variable(name="yearLast", value=max(dates).year),
         # the leak at disk center in the first and the last eclipse
-        _pending("leakFirst"),
-        _pending("leakLast"),
+        aastex.Variable(name="leakFirst", value=_significant(first.center), unit=rate),
+        aastex.Variable(name="leakLast", value=_significant(last.center), unit=rate),
         # the year the leak began to grow exponentially, and how fast
-        _pending("yearOnset"),
-        _pending("doublingTime"),
-        # how long after the EUV is absorbed the visible disk sets
-        _pending("sunsetDelay"),
-        # the fraction of the quiet-Sun signal at disk center that is leak
-        _pending("leakFractionQuietSun"),
+        aastex.Variable(name="yearOnset", value=growth.since),
+        aastex.Variable(name="doublingTime", value=_significant(growth.doubling)),
+        # how long after the EUV edge the visible disk is half set, the median over the
+        # eclipses since the onset (before it the setting is held at this median)
+        aastex.Variable(
+            name="sunsetDelay",
+            value=_significant(
+                np.median(
+                    u.Quantity(
+                        [k.sunset for k in leaks if k.date.year >= eclipses.onset]
+                    )
+                )
+            ),
+        ),
+        # the fraction of the signal at disk center that is leak, in the last eclipse
+        aastex.Variable(
+            name="leakFractionQuietSun",
+            value=aastex.NoEscape(rf"{_significant(fraction * u.one).value:g}\%"),
+        ),
     ]

@@ -19,6 +19,8 @@ dependencies = [
     "matplotlib",
     "astropy",
     "numpy",
+    "scipy",
+    "joblib",
     "named-arrays~=2.16",
 ]
 dynamic = ["version"]

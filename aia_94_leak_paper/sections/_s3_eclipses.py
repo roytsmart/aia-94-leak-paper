@@ -1,5 +1,7 @@
 import aastex
 
+import aia_94_leak_paper
+
 __all__ = [
     "eclipses",
 ]
@@ -23,12 +25,17 @@ def eclipses() -> aastex.Section:
     The frames in the umbra are the dark.
 \item \textbf{Results.}
     The leak at disk center in \numEclipses\ eclipses from \yearFirst\ to \yearLast: from
-    \leakFirst\ to \leakLast, with a doubling time of \doublingTime\ since \yearOnset.
+    \leakFirst\ to \leakLast, with a doubling time of \doublingTime\ since \yearOnset\
+    (Figure~\ref{fig:leakHistory}).
     Its limb darkening, the sharpness of its limb, and the halo beyond it.
 \item \textbf{Caveats.}
-    The core and the wings of the \PSF\ are degenerate, though the light they deliver to the disk
-    is not; one ingress fell during a flare; before \yearOnset\ there is only a faint diffuse glow.
+    The \PSF\ is fit once to the brightest eclipses and held fixed, since in a single eclipse its
+    core and wing trade off against each other, though the light they deliver to the disk does not.
+    Before \yearOnset\ the leak is too faint to time its setting, which is held at its median since,
+    and it lies above the exponential the later eclipses follow.
+    One ingress fell during a flare.
 \item \textbf{Figures.}
     An ingress in 94\,\AA\ and 171\,\AA; the leak at disk center against time; its radial profile.
 \end{outline}""")
+    result.append(aia_94_leak_paper.figures.leak_history())
     return result
