@@ -58,21 +58,38 @@ def noise() -> aastex.FigureStar:
     left.axhline(
         read, color="black", linestyle="dashed", linewidth=0.8, label="read noise"
     )
+    # what the variance would be if all of the signal carried photon noise:
+    # the slope near disk center, started from the read noise at zero signal
+    left.plot(
+        s,
+        read + np.nanmean(result.slope) * s,
+        color="black",
+        linestyle="dotted",
+        linewidth=0.8,
+        label="photon noise alone",
+    )
     p = result.noiseless.to_value(u.DN)
     left.annotate(
         "",
         xy=(p, read),
         xytext=(0, read),
-        arrowprops={"arrowstyle": "<->", "color": "tab:red", "linewidth": 0.8},
+        arrowprops={
+            "arrowstyle": "<->",
+            "color": "tab:red",
+            "linewidth": 0.8,
+            "mutation_scale": 6,
+            "shrinkA": 0,
+            "shrinkB": 0,
+        },
     )
     left.text(
         p / 2, read * 0.85, "$p$", color="tab:red", ha="center", va="top", fontsize=8
     )
     left.set_xlim(0, 20)
-    left.set_ylim(0, 12)
+    left.set_ylim(0, 16)
     left.set_xlabel("signal (DN)")
     left.set_ylabel(r"variance (DN$^2$)")
-    left.legend(fontsize=7, loc="upper left")
+    left.legend(fontsize=7, loc="upper left", handlelength=1.5, labelspacing=0.3)
 
     # the map of the noiseless signal on the disk; off the limb the slope of
     # the disk does not hold
@@ -153,6 +170,9 @@ Left: the variance of one frame against its signal, near disk center (within hal
 the limb (1.05 to 1.3 radii), and the read noise from the corners beyond the field stop.
 Off the limb the variance rises from the read noise; near disk center it reaches the read noise
 only at a signal of $p = \noiselessCenter \pm \noiselessSpread$, which carries no photon noise.
+The dotted line is the variance if all of the signal carried photon noise, the slope near disk
+center started from the read noise at zero signal: the points off the limb follow it, and those near
+disk center lie $p$ to its right.
 Each quadrant of the detector, read out by its own amplifier, is fit with its own read noise and
 slope; the line and the read noise shown are their means, and the uncertainty of $p$ is its spread
 among the quadrants.

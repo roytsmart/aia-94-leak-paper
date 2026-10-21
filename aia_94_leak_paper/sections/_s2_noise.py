@@ -21,7 +21,8 @@ def noise() -> aastex.Section:
     The read noise, about \readNoise, comes from the corners of the \CCD\ beyond the field stop;
     each quadrant of the \CCD\ is read out by its own amplifier, and is fit on its own.
 \item \textbf{The noiseless signal.}
-    Off the limb the variance rises from the read noise with the signal, as photon noise should.
+    Off the limb the variance rises from the read noise with the signal, as photon noise alone
+    would, at the slope found near disk center.
     Near disk center the line of slope \noiseSlope\ meets the read noise only at a signal of
     $\noiselessCenter \pm \noiselessSpread$: that much of the signal carries no photon noise
     (Figure~\ref{fig:noise}, left).
