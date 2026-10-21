@@ -29,14 +29,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .[test]
-      # The eclipse archive is a few hundred megabytes, downloaded from a
-      # release of this repository and checked against the digest in
-      # `_archive.py`, so a new version of the archive is a new key.
-      - name: Restore the eclipse archive
+      # The archives (a few hundred megabytes of eclipses, a few tens of noise)
+      # are downloaded from releases of this repository and checked against
+      # the digests in the `_archive.py` modules, so a new version of either
+      # is a new key.
+      - name: Restore the archives
         uses: actions/cache@v6
         with:
-          path: ~/.cache/aia_94_leak_paper/eclipses-v*
-          key: eclipses-${{ hashFiles('aia_94_leak_paper/eclipses/_archive.py') }}
+          path: |
+            ~/.cache/aia_94_leak_paper/eclipses-v*
+            ~/.cache/aia_94_leak_paper/noise-v*
+          key: archives-${{ hashFiles('aia_94_leak_paper/*/_archive.py') }}
       # The fits of the leak in each eclipse take a few minutes in all. `joblib`
       # keys them on a digest of the model and on the version of the archive,
       # so an older cache is safe to restore: whatever it no longer answers is

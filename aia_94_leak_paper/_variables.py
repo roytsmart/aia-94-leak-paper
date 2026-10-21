@@ -46,6 +46,14 @@ def variables() -> list[aastex.Variable]:
     rate = (u.DN, u.s**-1)
     first, last = leaks[0], leaks[-1]
     fraction = (last.center / last.quiet).to_value(u.percent)
+    noise = aia_94_leak_paper.noise.fit(date_ingress)
+    ratio = np.median(
+        [
+            (n.rate / k.center).to_value(u.percent)
+            for n, k in zip(aia_94_leak_paper.noise.history(), leaks)
+            if k.date.year >= eclipses.onset
+        ]
+    )
     return [
         # the eclipses the leak is measured in, and the years they span
         aastex.Variable(name="numEclipses", value=len(dates)),
@@ -84,5 +92,15 @@ def variables() -> list[aastex.Variable]:
         aastex.Variable(
             name="leakFractionQuietSun",
             value=aastex.NoEscape(rf"{_significant(fraction * u.one).value:g}\%"),
+        ),
+        # the noise of the run on the day of the ingress shown
+        aastex.Variable(name="noiseFrames", value=aia_94_leak_paper.noise.frames),
+        aastex.Variable(name="readNoise", value=_significant(noise.read)),
+        aastex.Variable(name="noiseSlope", value=_significant(noise.slope * u.DN)),
+        aastex.Variable(name="noiselessCenter", value=_significant(noise.noiseless)),
+        # the noiseless signal against the leak in the eclipses since the onset
+        aastex.Variable(
+            name="noiseRatio",
+            value=aastex.NoEscape(rf"{_significant(ratio * u.one).value:g}\%"),
         ),
     ]
