@@ -29,26 +29,27 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .[test]
-      # The archives (a few hundred megabytes of eclipses, a few tens of noise)
-      # are downloaded from releases of this repository and checked against
-      # the digests in the `_archive.py` modules, so a new version of either
-      # is a new key.
+      # The archives (a few hundred megabytes of eclipses, about a hundred of
+      # the six channels for the DEMs, a few tens of noise) are downloaded from
+      # releases of this repository and checked against the digests in the
+      # `_archive.py` modules, so a new version of any is a new key.
       - name: Restore the archives
         uses: actions/cache@v6
         with:
           path: |
+            ~/.cache/aia_94_leak_paper/dems-v*
             ~/.cache/aia_94_leak_paper/eclipses-v*
             ~/.cache/aia_94_leak_paper/noise-v*
           key: archives-${{ hashFiles('aia_94_leak_paper/*/_archive.py') }}
-      # The fits of the leak in each eclipse take a few minutes in all. `joblib`
-      # keys them on a digest of the model and on the version of the archive,
-      # so an older cache is safe to restore: whatever it no longer answers is
-      # computed again.
-      - name: Restore the fits of the leak
+      # The fits of the leak in each eclipse, and the DEMs of each day, take a
+      # few minutes each in all. `joblib` keys them on a digest of their model
+      # and on the version of their archive, so an older cache is safe to
+      # restore: whatever it no longer answers is computed again.
+      - name: Restore the fits of the leak and the DEMs
         uses: actions/cache@v6
         with:
           path: ~/.cache/aia_94_leak_paper/joblib
-          key: fits-${{ hashFiles('aia_94_leak_paper/eclipses/*.py') }}
+          key: fits-${{ hashFiles('aia_94_leak_paper/eclipses/*.py', 'aia_94_leak_paper/dems/*.py') }}
           restore-keys: |
             fits-
       - name: Test with pytest

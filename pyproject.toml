@@ -22,6 +22,8 @@ dependencies = [
     "scipy",
     "joblib",
     "named-arrays~=2.16",
+    "solar-dynamics-observatory~=1.3",
+    "utu~=0.5",
 ]
 dynamic = ["version"]
 

@@ -31,6 +31,11 @@ def _significant(value: u.Quantity, digits: int = 2) -> u.Quantity:
     return np.round(value, decimals)
 
 
+def _percent(fraction: float) -> aastex.NoEscape:
+    """A fraction written as a percentage, to two significant figures."""
+    return aastex.NoEscape(rf"{_significant(fraction * 100 * u.one).value:g}\%")
+
+
 def variables() -> list[aastex.Variable]:
     """
     A list of LaTeX variables for every numeric quantity cited in the prose.
@@ -60,6 +65,11 @@ def variables() -> list[aastex.Variable]:
         if m
     ]
     ratios = [(n.rate / k.center).to_value(u.percent) for n, k in measured]
+    dems = aia_94_leak_paper.dems
+    date_dem = dems.date_dem
+    shown = dems.summary(date_dem)
+    summaries = dems.history()
+    early = [s for s in summaries if s.date.year < eclipses.onset]
     return [
         # the eclipses the leak is measured in, and the years they span
         aastex.Variable(name="numEclipses", value=len(dates)),
@@ -143,4 +153,56 @@ def variables() -> list[aastex.Variable]:
             name="noiseRatioMax",
             value=aastex.NoEscape(rf"{_significant(max(ratios) * u.one).value:g}\%"),
         ),
+        # the day whose DEMs are shown, the temperature above which plasma
+        # counts as hot, and how much of the emission measure of its coronal
+        # holes and quiet Sun is hot, as observed and with the leak subtracted
+        aastex.Variable(
+            name="demDate",
+            value=aastex.NoEscape(f"{date_dem:%Y} {date_dem:%B} {date_dem.day}"),
+        ),
+        aastex.Variable(
+            name="hotTemperature",
+            value=_significant((10**dems.hot * u.K).to(u.MK)),
+        ),
+        aastex.Variable(name="hotQuietObserved", value=_percent(shown.quiet_observed)),
+        aastex.Variable(
+            name="hotQuietCorrected", value=_percent(shown.quiet_corrected)
+        ),
+        aastex.Variable(name="hotHolesObserved", value=_percent(shown.holes_observed)),
+        aastex.Variable(
+            name="hotHolesCorrected", value=_percent(shown.holes_corrected)
+        ),
+        # the most of it before the onset as observed, and the most of it on any
+        # day with the leak subtracted
+        aastex.Variable(
+            name="hotQuietEarly",
+            value=_percent(max(s.quiet_observed for s in early)),
+        ),
+        aastex.Variable(
+            name="hotHolesEarly",
+            value=_percent(
+                max(s.holes_observed for s in early if np.isfinite(s.holes_observed))
+            ),
+        ),
+        aastex.Variable(
+            name="hotQuietCorrectedMax",
+            value=_percent(max(s.quiet_corrected for s in summaries)),
+        ),
+        aastex.Variable(
+            name="hotHolesCorrectedMax",
+            value=_percent(
+                max(
+                    s.holes_corrected
+                    for s in summaries
+                    if np.isfinite(s.holes_corrected)
+                )
+            ),
+        ),
+        aastex.Variable(name="holesFewest", value=dems.fewest),
+        # the side of the bins the DEMs are inverted in
+        aastex.Variable(name="demBin", value=_significant(dems.load(date_dem).scale)),
+        # how bright the quiet Sun is in 94 Å with the leak subtracted, against
+        # what its DEM predicts, in the first and the last eclipse
+        aastex.Variable(name="ratioFirst", value=_percent(summaries[0].ratio_94)),
+        aastex.Variable(name="ratioLast", value=_percent(summaries[-1].ratio_94)),
     ]
