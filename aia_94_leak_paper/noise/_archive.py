@@ -38,7 +38,7 @@ url: str = (
 )
 """Where the archive is published."""
 
-sha256: str = ""
+sha256: str = "b92ed3ea7a145e6f7e8945dbf9c6b530439c1def546c7f008b2c8e9dcfaef539"
 """The SHA-256 digest of the archive, checked after every download."""
 
 

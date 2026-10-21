@@ -47,13 +47,18 @@ def variables() -> list[aastex.Variable]:
     first, last = leaks[0], leaks[-1]
     fraction = (last.center / last.quiet).to_value(u.percent)
     noise = aia_94_leak_paper.noise.fit(date_ingress)
-    ratio = np.median(
-        [
-            (n.rate / k.center).to_value(u.percent)
-            for n, k in zip(aia_94_leak_paper.noise.history(), leaks)
-            if k.date.year >= eclipses.onset
-        ]
-    )
+    # the noise method measures the leak once the leak is three times the
+    # typical spread of the method among the quadrants of the detector
+    history = aia_94_leak_paper.noise.history()
+    spread = aia_94_leak_paper.noise.spread()
+    measured = [
+        (n, k)
+        for n, k, m in zip(
+            history, leaks, aia_94_leak_paper.noise.measured(history, leaks)
+        )
+        if m
+    ]
+    ratios = [(n.rate / k.center).to_value(u.percent) for n, k in measured]
     return [
         # the eclipses the leak is measured in, and the years they span
         aastex.Variable(name="numEclipses", value=len(dates)),
@@ -95,12 +100,25 @@ def variables() -> list[aastex.Variable]:
         ),
         # the noise of the run on the day of the ingress shown
         aastex.Variable(name="noiseFrames", value=aia_94_leak_paper.noise.frames),
-        aastex.Variable(name="readNoise", value=_significant(noise.read)),
-        aastex.Variable(name="noiseSlope", value=_significant(noise.slope * u.DN)),
-        aastex.Variable(name="noiselessCenter", value=_significant(noise.noiseless)),
-        # the noiseless signal against the leak in the eclipses since the onset
+        aastex.Variable(name="readNoise", value=_significant(np.nanmean(noise.read))),
         aastex.Variable(
-            name="noiseRatio",
-            value=aastex.NoEscape(rf"{_significant(ratio * u.one).value:g}\%"),
+            name="noiseSlope", value=_significant(np.nanmean(noise.slope) * u.DN)
+        ),
+        aastex.Variable(name="noiselessCenter", value=_significant(noise.noiseless)),
+        aastex.Variable(
+            name="noiselessSpread", value=_significant(noise.spread, digits=1)
+        ),
+        # the typical spread of the noise method among the quadrants, and how
+        # its noiseless signal compares with the eclipses once the leak is
+        # three times that
+        aastex.Variable(name="noiseSpread", value=_significant(spread, digits=1)),
+        aastex.Variable(name="yearNoise", value=min(k.date.year for _, k in measured)),
+        aastex.Variable(
+            name="noiseRatioMin",
+            value=aastex.NoEscape(rf"{_significant(min(ratios) * u.one).value:g}\%"),
+        ),
+        aastex.Variable(
+            name="noiseRatioMax",
+            value=aastex.NoEscape(rf"{_significant(max(ratios) * u.one).value:g}\%"),
         ),
     ]

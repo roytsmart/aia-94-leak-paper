@@ -12,6 +12,10 @@ carries no photon noise, the variance grows only with the rest:
 so a line fit to the variance against the signal crosses the read noise
 not at zero signal but at :math:`S = p`. The read noise is measured in the
 corners of the detector beyond the field stop, which see no light.
+
+The detector is read out through four amplifiers, one per quadrant, whose
+read noise and gain differ, so each quadrant is fit with its own read noise
+(from its own corner) and its own slope.
 """
 
 import dataclasses
@@ -28,12 +32,18 @@ __all__ = [
     "Noise",
     "fit",
     "history",
+    "measured",
     "noiseless",
     "pooled",
+    "quadrants",
+    "spread",
 ]
 
-_corners = 1.75
-"""Regions this far from the center of the disk, in solar radii, are beyond the field stop."""
+_corners = 2600
+"""
+Regions whose centers are this far from the center of the detector, in
+pixels, are beyond its field stop, whose light ends near 2500 pixels.
+"""
 
 _center = 0.5
 """Regions within this distance of the center of the disk are fit for the noiseless signal."""
@@ -43,6 +53,22 @@ _signal = (2, 20) * u.DN
 
 _count = 3000
 """The fewest residuals a bin of signal needs to be fit."""
+
+
+def quadrants(run: "aia_94_leak_paper.noise.Run") -> list[na.ScalarArray]:
+    """
+    Which regions lie in each quadrant of the detector, each read out by its
+    own amplifier, as boolean arrays with the axes ``y`` and ``x``.
+
+    Parameters
+    ----------
+    run
+        A run of the archive.
+    """
+    n = run.count.shape["x"]
+    y = na.arange(0, n, axis="y") < n // 2
+    x = na.arange(0, n, axis="x") < n // 2
+    return [y & x, y & ~x, ~y & x, ~y & ~x]
 
 
 def pooled(run: "aia_94_leak_paper.noise.Run", where: na.ScalarArray) -> dict:
@@ -76,7 +102,11 @@ def pooled(run: "aia_94_leak_paper.noise.Run", where: na.ScalarArray) -> dict:
 
 @dataclasses.dataclass(frozen=True)
 class Noise:
-    """The noise of the 94 Å channel in one run, in the units of the detector."""
+    """
+    The noise of the 94 Å channel in one run, in the units of the detector,
+    for each quadrant of the detector (lower left, lower right, upper left,
+    upper right).
+    """
 
     date: datetime.date
     """The day of the run."""
@@ -88,16 +118,31 @@ class Noise:
     """The exposure time of every frame."""
 
     read: u.Quantity
-    """The variance of the read noise of one frame, from the corners."""
+    """The variance of the read noise of one frame, from the corner of each quadrant."""
 
-    slope: float
-    """How much the variance grows per DN of signal, :math:`b`."""
+    slope: np.ndarray
+    """How much the variance grows per DN of signal near disk center, :math:`b`."""
 
     intercept: u.Quantity
-    """The variance the line reaches at zero signal."""
+    """The variance the line of each quadrant reaches at zero signal."""
 
-    noiseless: u.Quantity
-    """The noiseless signal near disk center in one frame, :math:`p`."""
+    @property
+    def noiseless_quadrants(self) -> u.Quantity:
+        """The noiseless signal near disk center in one frame, :math:`p`, in each quadrant."""
+        return (self.read - self.intercept) / self.slope / u.DN
+
+    @property
+    def noiseless(self) -> u.Quantity:
+        """
+        The noiseless signal near disk center in one frame, the mean of the
+        quadrants that could be fit.
+        """
+        return np.nanmean(self.noiseless_quadrants)
+
+    @property
+    def spread(self) -> u.Quantity:
+        """The standard deviation of the noiseless signal among the quadrants that could be fit."""
+        return np.nanstd(self.noiseless_quadrants)
 
     @property
     def rate(self) -> u.Quantity:
@@ -113,6 +158,9 @@ def _line(table: dict) -> tuple[float, u.Quantity]:
     use = (
         (signal >= _signal[0].value) & (signal <= _signal[1].value) & (count >= _count)
     )
+    if use.sum() < 3:
+        # near solar minimum the quiet Sun of a quadrant can be too faint
+        return np.nan, np.nan * u.DN**2
     weight = np.sqrt(count[use]) / variance[use]
     design = np.stack([np.ones(use.sum()), signal[use]], axis=-1)
     (intercept, slope), *_ = np.linalg.lstsq(
@@ -121,9 +169,25 @@ def _line(table: dict) -> tuple[float, u.Quantity]:
     return float(slope), intercept * u.DN**2
 
 
+def _corner(run: "aia_94_leak_paper.noise.Run") -> na.ScalarArray:
+    """The regions of the corners of the detector, beyond the field stop."""
+    n = run.count.shape["x"]
+    x, y = ((na.arange(0, n, axis=a) + 0.5 - n / 2) * run.region for a in ("x", "y"))
+    return np.sqrt(np.square(x) + np.square(y)) > _corners
+
+
+def _read(run: "aia_94_leak_paper.noise.Run", where: na.ScalarArray) -> u.Quantity:
+    """The variance of the read noise in the corner of the regions selected."""
+    corner = pooled(run, _corner(run) & where)
+    count = corner["count"].ndarray
+    filled = count > 0
+    return np.average(corner["variance"].ndarray[filled], weights=count[filled])
+
+
 def fit(date: datetime.date) -> Noise:
     """
-    The read noise, and the noiseless signal near disk center, in one run.
+    The read noise, and the noiseless signal near disk center, in each
+    quadrant of one run.
 
     Parameters
     ----------
@@ -131,27 +195,27 @@ def fit(date: datetime.date) -> Noise:
         A day of :data:`aia_94_leak_paper.eclipses.dates`.
     """
     run = aia_94_leak_paper.noise.load(date)
-    r = run.r
-    corners = pooled(run, r > _corners)
-    count = corners["count"].ndarray
-    filled = count > 0
-    read = np.average(corners["variance"].ndarray[filled], weights=count[filled])
-    slope, intercept = _line(pooled(run, r < _center))
+    reads, slopes, intercepts = [], [], []
+    for quadrant in quadrants(run):
+        reads.append(_read(run, quadrant))
+        slope, intercept = _line(pooled(run, (run.r < _center) & quadrant))
+        slopes.append(slope)
+        intercepts.append(intercept)
     return Noise(
         date=date,
         time=run.time,
         exposure=run.exposure,
-        read=read,
-        slope=slope,
-        intercept=intercept,
-        noiseless=(read - intercept) / slope / u.DN,
+        read=u.Quantity(reads),
+        slope=np.array(slopes),
+        intercept=u.Quantity(intercepts),
     )
 
 
 def noiseless(date: datetime.date) -> na.ScalarArray:
     """
-    The noiseless signal of each region of one run, with the slope of the
-    line held at its value near disk center.
+    The noiseless signal of each region of one run, with the read noise and
+    the slope of the line held at their values near disk center in its
+    quadrant.
 
     Parameters
     ----------
@@ -165,15 +229,46 @@ def noiseless(date: datetime.date) -> na.ScalarArray:
         & (run.signal <= 1.5 * _signal[1])
         & (run.count > 100)
     )
+    # the read noise and slope of the quadrant of each region
+    read = 0 * u.DN**2
+    slope = 0
+    for quadrant, r, b in zip(quadrants(run), result.read, result.slope):
+        read = np.where(quadrant, r, read)
+        slope = np.where(quadrant, b, slope)
     # the intercept of each region, given the slope, weighted by the residuals in each bin
     weight = np.where(use, run.count, 0)
     with np.errstate(divide="ignore", invalid="ignore"):
         intercept = np.nan_to_num(
-            (run.variance - result.slope * run.signal * u.DN) * weight
+            (run.variance - slope * run.signal * u.DN) * weight
         ).sum("signal") / weight.sum("signal")
-    return (result.read - intercept) / result.slope / u.DN
+    return (read - intercept) / slope / u.DN
 
 
 def history() -> list[Noise]:
     """The noise of the run on every day of :data:`aia_94_leak_paper.eclipses.dates`."""
     return [fit(date) for date in aia_94_leak_paper.eclipses.dates]
+
+
+def spread() -> u.Quantity:
+    """The typical spread of the noiseless signal among the quadrants, the median over the days."""
+    return np.nanmedian(u.Quantity([n.spread for n in history()]))
+
+
+def measured(
+    noises: list[Noise],
+    leaks: "list[aia_94_leak_paper.eclipses.Leak]",
+) -> list[bool]:
+    """
+    Whether the noise of each day measures the leak: whether the leak in the
+    eclipse of that day is three times the typical :func:`spread` of the method.
+
+    Parameters
+    ----------
+    noises
+        The noise of each day, as :func:`history` gives it.
+    leaks
+        The leak in the eclipse of each day, as
+        :func:`aia_94_leak_paper.eclipses.history` gives it.
+    """
+    s = spread()
+    return [bool(k.center * n.exposure > 3 * s) for n, k in zip(noises, leaks)]

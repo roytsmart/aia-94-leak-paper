@@ -45,11 +45,12 @@ def noise() -> aastex.FigureStar:
         left.plot(
             signal[use], variance[use], "o", color=color, markersize=3, label=label
         )
+    # the line and the read noise shown are the means of the quadrants'
     s = np.linspace(0, 20, 50)
-    read = result.read.to_value(u.DN**2)
+    read = np.nanmean(result.read).to_value(u.DN**2)
     left.plot(
         s,
-        result.intercept.to_value(u.DN**2) + result.slope * s,
+        np.nanmean(result.intercept).to_value(u.DN**2) + np.nanmean(result.slope) * s,
         color="tab:red",
         linewidth=0.8,
     )
@@ -72,9 +73,10 @@ def noise() -> aastex.FigureStar:
     left.set_ylabel(r"variance (DN$^2$)")
     left.legend(fontsize=7, loc="upper left")
 
-    # the map of the noiseless signal
+    # the map of the noiseless signal on the disk; off the limb the slope of
+    # the disk does not hold
     pmap = module.noiseless(date).to_value(u.DN)
-    image = pmap.ndarray_aligned(("y", "x"))
+    image = np.where(r < 1, pmap, np.nan).ndarray_aligned(("y", "x"))
     position = run.position
     x, y = position.x.ndarray, position.y.ndarray
     im = middle.imshow(
@@ -105,10 +107,13 @@ def noise() -> aastex.FigureStar:
     rate = u.DN / u.s
 
     def profile(values: np.ndarray, radius: np.ndarray) -> list[float]:
-        return [
-            np.nanmedian(values[(radius >= lo) & (radius < hi)])
-            for lo, hi in itertools.pairwise(edges)
-        ]
+        """The median of the finite values in each ring, or nothing if there are none."""
+        result = []
+        for lo, hi in itertools.pairwise(edges):
+            ring = values[(radius >= lo) & (radius < hi)]
+            ring = ring[np.isfinite(ring)]
+            result.append(np.median(ring) if ring.size else np.nan)
+        return result
 
     exposure = result.exposure.to_value(u.s)
     radius = r.ndarray_aligned(("y", "x"))
@@ -146,9 +151,12 @@ detector.
 Left: the variance of one frame against its signal, near disk center (within half a radius) and off
 the limb (1.05 to 1.3 radii), and the read noise from the corners beyond the field stop.
 Off the limb the variance rises from the read noise; near disk center it reaches the read noise
-only at a signal of $p = \noiselessCenter$, which carries no photon noise.
-Middle: $p$ in each region of $64 \times 64$ pixels, with the slope of the line held at its value
-near disk center.
+only at a signal of $p = \noiselessCenter \pm \noiselessSpread$, which carries no photon noise.
+Each quadrant of the detector, read out by its own amplifier, is fit with its own read noise and
+slope; the line and the read noise shown are their means, and the uncertainty of $p$ is its spread
+among the quadrants.
+Middle: $p$ in each region of $64 \times 64$ pixels on the disk, with the read noise and the slope of
+its quadrant; off the limb the slope of the disk does not hold.
 Right: its radial profile per second, against the leak measured in the eclipse of the same day.""")
     )
     return result_figure
