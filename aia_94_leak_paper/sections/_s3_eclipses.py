@@ -17,7 +17,7 @@ def eclipses() -> aastex.Section:
 \item \textbf{Ingress.}
     The atmosphere absorbs the \EUV\ high above the surface, while the visible disk sets only near
     it, so for a while each part of the disk is seen in visible light alone.
-    The 171\,\AA\ channel marks where the \EUV\ has gone.
+    The 171\,\AA\ channel marks where the \EUV\ has gone (Figure~\ref{fig:ingress}).
 \item \textbf{Method.}
     Each bin of the disk on a clock started by its own 171\,\AA\ edge; a forward model of a
     limb-darkened disk setting behind the atmosphere, seen through a \PSF\ with a sharp core and
@@ -35,7 +35,8 @@ def eclipses() -> aastex.Section:
     and it lies above the exponential the later eclipses follow.
     One ingress fell during a flare.
 \item \textbf{Figures.}
-    An ingress in 94\,\AA\ and 171\,\AA; the leak at disk center against time; its radial profile.
+    Still to come: the radial profile of the leak, and the sharpness of its limb.
 \end{outline}""")
+    result.append(aia_94_leak_paper.figures.ingress())
     result.append(aia_94_leak_paper.figures.leak_history())
     return result
