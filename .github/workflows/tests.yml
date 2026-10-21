@@ -35,8 +35,19 @@ jobs:
       - name: Restore the eclipse archive
         uses: actions/cache@v6
         with:
-          path: ~/.cache/aia_94_leak_paper
+          path: ~/.cache/aia_94_leak_paper/eclipses-v*
           key: eclipses-${{ hashFiles('aia_94_leak_paper/eclipses/_archive.py') }}
+      # The fits of the leak in each eclipse take a few minutes in all. `joblib`
+      # keys them on a digest of the model and on the version of the archive,
+      # so an older cache is safe to restore: whatever it no longer answers is
+      # computed again.
+      - name: Restore the fits of the leak
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/aia_94_leak_paper/joblib
+          key: fits-${{ hashFiles('aia_94_leak_paper/eclipses/*.py') }}
+          restore-keys: |
+            fits-
       - name: Test with pytest
         run: pytest
       - name: Upload the article
