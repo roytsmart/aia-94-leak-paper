@@ -45,16 +45,20 @@ Roy T. Smart is the corresponding author, then Charles C. Kankelborg.
   thin modules. Anything reusable may move down the stack (`sdo`, `utu`,
   `named-arrays`) only after the user agrees to the new library API.
 - **Data.** AIA level 1 images come from JSOC (`aia.lev1_euv_12s`, by SUMS path
-  through `drms`), AIA flat fields from `aia.flatfield`, and SUVI level 2
-  composites from NOAA NCEI. Cache downloads, and keep the number of parallel
-  requests to JSOC small (it answers 12 at once with HTTP 503).
-- **The eclipse archive.** The ingresses of the days in `eclipses.dates`,
-  binned 16 x 16, are built from JSOC by `python -m aia_94_leak_paper.eclipses
-  build` (needs `.[data]`), bundled by `... pack`, and published as an asset
-  of the release named by `eclipses.version`; the article reads them through
-  `eclipses.load`, which downloads the asset once and checks its SHA-256. A
-  change to what the builder writes is a new release and a new
-  `version`/`sha256`, never a replaced asset.
+  through `drms`), the synoptic level 1.5 images for the DEMs from
+  `jsoc1.stanford.edu/data/aia/synoptic`, AIA flat fields from
+  `aia.flatfield`, and SUVI level 2 composites from NOAA NCEI. Cache
+  downloads, and keep the number of parallel requests to JSOC small (it
+  answers 12 at once with HTTP 503).
+- **The archives.** Each of `eclipses` (the ingresses, binned 16 x 16),
+  `noise` (the noon runs, reduced to statistics per region), and `dems` (the
+  six coronal channels at noon, binned to 4.8 arcsec, with the 94 Å flat field)
+  is built from JSOC by `python -m aia_94_leak_paper.<name> build` (needs
+  `.[data]`), bundled by `... pack`, and published as an asset of the release
+  named by `<name>.version`; the article reads them through `<name>.load`,
+  which downloads the asset once and checks its SHA-256. A change to what a
+  builder writes is a new release and a new `version`/`sha256`, never a
+  replaced asset.
 
 ## Commands
 
