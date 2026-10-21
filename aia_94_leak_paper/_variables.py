@@ -39,6 +39,7 @@ def variables() -> list[aastex.Variable]:
     that the text stays in sync with the analysis.
     """
     eclipses = aia_94_leak_paper.eclipses
+    date_ingress = aia_94_leak_paper.figures.date_ingress
     dates = eclipses.dates
     leaks = eclipses.history()
     growth = eclipses.growth(leaks)
@@ -67,6 +68,17 @@ def variables() -> list[aastex.Variable]:
                     )
                 )
             ),
+        ),
+        # the eclipse whose ingress is shown, and when its visible disk set after the EUV edge
+        aastex.Variable(
+            name="ingressDate",
+            value=aastex.NoEscape(
+                f"{date_ingress:%Y} {date_ingress:%B} {date_ingress.day}"
+            ),
+        ),
+        aastex.Variable(
+            name="ingressSunset",
+            value=_significant(eclipses.fit(date_ingress).sunset),
         ),
         # the fraction of the signal at disk center that is leak, in the last eclipse
         aastex.Variable(
