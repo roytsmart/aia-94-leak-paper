@@ -29,6 +29,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .[test]
+      # The eclipse archive is a few hundred megabytes, downloaded from a
+      # release of this repository and checked against the digest in
+      # `_archive.py`, so a new version of the archive is a new key.
+      - name: Restore the eclipse archive
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/aia_94_leak_paper
+          key: eclipses-${{ hashFiles('aia_94_leak_paper/eclipses/_archive.py') }}
       - name: Test with pytest
         run: pytest
       - name: Upload the article

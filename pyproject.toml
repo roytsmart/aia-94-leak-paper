@@ -17,13 +17,20 @@ dependencies = [
     "pylatex~=1.4",
     "aastex~=0.9",
     "matplotlib",
+    "astropy",
+    "numpy",
+    "named-arrays~=2.16",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
+data = [
+    "drms",
+]
 test = [
     "pytest",
     "pymupdf",
+    "ruff==0.17.1",
 ]
 
 [project.urls]
