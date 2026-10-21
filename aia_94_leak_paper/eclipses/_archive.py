@@ -39,7 +39,7 @@ url: str = (
 )
 """Where the archive is published."""
 
-sha256: str = ""
+sha256: str = "f1f341c7b2c19d45ca47f53c3ab2bef1a4181a9b2879c0e3c05320592a9f3771"
 """The SHA-256 digest of the archive, checked after every download."""
 
 directory_default = pathlib.Path(
