@@ -1,5 +1,7 @@
 import aastex
 
+import aia_94_leak_paper
+
 __all__ = [
     "variables",
 ]
@@ -26,11 +28,12 @@ def variables() -> list[aastex.Variable]:
     Reference these macros in section strings instead of hardcoding numbers so
     that the text stays in sync with the analysis.
     """
+    dates = aia_94_leak_paper.eclipses.dates
     return [
         # the eclipses the leak is measured in, and the years they span
-        _pending("numEclipses"),
-        _pending("yearFirst"),
-        _pending("yearLast"),
+        aastex.Variable(name="numEclipses", value=len(dates)),
+        aastex.Variable(name="yearFirst", value=min(dates).year),
+        aastex.Variable(name="yearLast", value=max(dates).year),
         # the leak at disk center in the first and the last eclipse
         _pending("leakFirst"),
         _pending("leakLast"),
