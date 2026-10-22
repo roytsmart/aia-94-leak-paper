@@ -24,6 +24,7 @@ __all__ = [
     "Run",
     "archive",
     "load",
+    "read",
     "sha256",
     "url",
     "version",
@@ -149,19 +150,15 @@ class Run:
             ) / self.count.sum("signal")
 
 
-def load(date: datetime.date, directory: None | pathlib.Path = None) -> Run:
+def read(path: pathlib.Path) -> Run:
     """
-    Read one day from the archive.
+    Read a run from a file written by :func:`aia_94_leak_paper.noise.accumulate`.
 
     Parameters
     ----------
-    date
-        A day of :data:`aia_94_leak_paper.eclipses.dates`.
-    directory
-        Where the archive is kept,
-        :data:`aia_94_leak_paper.eclipses.directory_default` if :obj:`None`.
+    path
+        The file of the run.
     """
-    path = archive(directory) / f"aia94_noise_{date:%Y%m%d}.fits"
     with fits.open(path) as hdul:
         p = hdul[0].header
         edges = np.array(hdul["EDGES"].data, dtype=float)
@@ -176,7 +173,7 @@ def load(date: datetime.date, directory: None | pathlib.Path = None) -> Run:
         signal = signal / count
     region = p["REGION"]
     return Run(
-        date=date,
+        date=datetime.date.fromisoformat(p["DATE_RUN"]),
         time=astropy.time.Time(p["T_FIRST"].rstrip("Z"), scale="utc"),
         exposure=p["EXPTIME"] * u.s,
         edges=na.ScalarArray(edges * u.DN, axes="signal_vertex"),
@@ -191,3 +188,18 @@ def load(date: datetime.date, directory: None | pathlib.Path = None) -> Run:
         ),
         radius=p["R_SUN"] / region,
     )
+
+
+def load(date: datetime.date, directory: None | pathlib.Path = None) -> Run:
+    """
+    Read one day from the archive.
+
+    Parameters
+    ----------
+    date
+        A day of :data:`aia_94_leak_paper.eclipses.dates`.
+    directory
+        Where the archive is kept,
+        :data:`aia_94_leak_paper.eclipses.directory_default` if :obj:`None`.
+    """
+    return read(archive(directory) / f"aia94_noise_{date:%Y%m%d}.fits")

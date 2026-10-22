@@ -23,9 +23,10 @@ The leak is measured four independent ways, and each gets its own section:
 - **Earth eclipses.** During ingress the atmosphere absorbs the EUV well before
   the visible disk sets, so the leak is seen alone. One ingress per season
   gives its history since 2010.
-- **Independent checks.** The thick focal-plane filter attenuates it more than
-  the EUV; the 304 Å channel (same telescope and CCD) has none; SUVI on GOES-16,
-  -18, and -19 gives the same history.
+- **Independent checks.** The thick focal-plane filter (1000 Å more Zr)
+  attenuates it only as much as the EUV, so it passes that filter through
+  openings rather than the metal; the 304 Å channel (same telescope and CCD)
+  has none; SUVI on GOES-16, -18, and -19 gives the same history.
 - **Consequences and a correction.** DEMs (hot quiet Sun and coronal holes),
   Fe XVIII maps, the degradation calibration, and published results that show
   its symptoms.
@@ -51,9 +52,10 @@ Roy T. Smart is the corresponding author, then Charles C. Kankelborg.
   downloads, and keep the number of parallel requests to JSOC small (it
   answers 12 at once with HTTP 503).
 - **The archives.** Each of `eclipses` (the ingresses, binned 16 x 16),
-  `noise` (the noon runs, reduced to statistics per region), and `dems` (the
-  six coronal channels at noon, binned to 4.8 arcsec, with the 94 Å flat field)
-  is built from JSOC by `python -m aia_94_leak_paper.<name> build` (needs
+  `noise` (the noon runs, reduced to statistics per region), `filters` (a run
+  through each focal-plane filter on 2026-03-07, reduced the same way), and
+  `dems` (the six coronal channels at noon, binned to 4.8 arcsec, with the
+  94 Å flat field) is built from JSOC by `python -m aia_94_leak_paper.<name> build` (needs
   `.[data]`), bundled by `... pack`, and published as an asset of the release
   named by `<name>.version`; the article reads them through `<name>.load`,
   which downloads the asset once and checks its SHA-256. A change to what a

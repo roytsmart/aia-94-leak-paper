@@ -32,10 +32,12 @@ from astropy.io import fits
 from .. import _jsoc
 
 __all__ = [
+    "accumulate",
     "build",
     "edges",
     "frames",
     "region",
+    "usable",
 ]
 
 frames: int = 15
@@ -61,53 +63,65 @@ is set on every frame of 2026 January 19.
 """
 
 
+def usable(records: list[dict], filter: str = "94_THIN") -> bool:
+    """
+    Whether a run of 94 Å frames has equal exposures, all through one
+    focal-plane filter, and no flags in ``QUALITY`` but :data:`_harmless`.
+
+    Parameters
+    ----------
+    records
+        The frames of the run, as :func:`aia_94_leak_paper._jsoc.records`
+        gives them.
+    filter
+        The focal-plane filter every frame must have been taken through, as
+        ``WAVE_STR`` names it.
+    """
+    exposures = {round(float(r["EXPTIME"]), 3) for r in records}
+    filters = {r["WAVE_STR"] for r in records}
+    quality = {int(r["QUALITY"]) & ~_harmless for r in records}
+    return len(exposures) == 1 and filters == {filter} and quality == {0}
+
+
 def _run(date: datetime.date) -> list[dict]:
-    """
-    The first run of :data:`frames` consecutive 94 Å frames from noon on a
-    day with equal exposures and no flags in ``QUALITY`` but :data:`_harmless`.
-    """
+    """The first :func:`usable` run of :data:`frames` consecutive 94 Å frames from noon on a day."""
     start = np.datetime64(datetime.datetime.combine(date, _noon))
     for attempt in range(20):
         records = _jsoc.records(start, 12 * frames + 6, 94, ("image", "spikes"))
         if len(records) >= frames:
             records = records[:frames]
-            exposures = {round(float(r["EXPTIME"]), 3) for r in records}
-            quality = {int(r["QUALITY"]) & ~_harmless for r in records}
-            if len(exposures) == 1 and quality == {0}:
+            if usable(records):
                 return records
         start = start + np.timedelta64(5, "m")
     raise ValueError(f"no clean run of 94 frames near noon on {date}")
 
 
-def build(
-    date: datetime.date,
-    cache: pathlib.Path,
+def accumulate(
+    records: list[dict],
+    directory: pathlib.Path,
     flats: pathlib.Path,
-    output: pathlib.Path,
-) -> pathlib.Path:
+) -> fits.HDUList:
     """
-    Write the archive file of one day and return its path.
+    The noise of a run of consecutive 94 Å frames, accumulated over regions
+    and bins of signal, as the file of the archive holds it.
 
     Parameters
     ----------
-    date
-        A day of :data:`aia_94_leak_paper.eclipses.dates`.
-    cache
-        Where the level-1 images and their despike records are kept, one
-        directory per day.
+    records
+        The frames of the run, as :func:`aia_94_leak_paper._jsoc.records`
+        gives them with the ``image`` and ``spikes`` segments.
+    directory
+        Where the level-1 images of the run and their despike records are kept.
     flats
         Where the flat fields are kept.
-    output
-        Where to write the archive file.
     """
-    records = _run(date)
-    day = cache / f"{date:%Y%m%d}"
+    n_frames = len(records)
     images = []
     spiked = np.zeros((4096, 4096), dtype=bool)
     for i, record in enumerate(records):
         stamp = record["T_OBS"][:19].replace(":", "").replace("-", "")
-        image = _jsoc.fetch(record["image"], day / f"aia94_{stamp}.fits")
-        spikes = _jsoc.fetch(record["spikes"], day / f"spikes94_{stamp}.fits")
+        image = _jsoc.fetch(record["image"], directory / f"aia94_{stamp}.fits")
+        spikes = _jsoc.fetch(record["spikes"], directory / f"spikes94_{stamp}.fits")
         with fits.open(image) as hdul:
             header = hdul[1].header
             images.append(
@@ -131,12 +145,12 @@ def build(
     squared = np.zeros(shape)
     keep = ~spiked.ravel()
 
-    triplets = range(1, frames - 1)
+    triplets = range(1, n_frames - 1)
     samples = []
     for k in triplets:
         d = images[k] - (images[k - 1] + images[k + 1]) / 2
         s = (images[k - 1] + images[k] + images[k + 1]) / 3
-        other = (total - images[k - 1] - images[k] - images[k + 1]) / (frames - 3)
+        other = (total - images[k - 1] - images[k] - images[k + 1]) / (n_frames - 3)
         b = np.clip(np.digitize(other.ravel(), edges) - 1, 0, nbins - 1)
         samples.append((d.ravel(), s.ravel(), b))
 
@@ -161,10 +175,10 @@ def build(
 
     primary = fits.PrimaryHDU()
     p = primary.header
-    p["DATE_RUN"] = (f"{date:%Y-%m-%d}", "the day of the run")
+    p["DATE_RUN"] = (records[0]["T_OBS"][:10], "the day of the run")
     p["T_FIRST"] = (records[0]["T_OBS"], "T_OBS of the first frame")
     p["T_LAST"] = (records[-1]["T_OBS"], "T_OBS of the last frame")
-    p["NFRAMES"] = (frames, "consecutive frames in the run")
+    p["NFRAMES"] = (n_frames, "consecutive frames in the run")
     p["EXPTIME"] = (float(records[0]["EXPTIME"]), "exposure of every frame, s")
     p["REGION"] = (region, "pixels along each side of a region")
     p["CLIP"] = (_clip, "robust standard deviations kept")
@@ -187,8 +201,32 @@ def build(
         hdus.append(
             fits.ImageHDU(value.reshape(nbins, n, n).astype(np.float32), name=name)
         )
+    return fits.HDUList(hdus)
 
+
+def build(
+    date: datetime.date,
+    cache: pathlib.Path,
+    flats: pathlib.Path,
+    output: pathlib.Path,
+) -> pathlib.Path:
+    """
+    Write the archive file of one day and return its path.
+
+    Parameters
+    ----------
+    date
+        A day of :data:`aia_94_leak_paper.eclipses.dates`.
+    cache
+        Where the level-1 images and their despike records are kept, one
+        directory per day.
+    flats
+        Where the flat fields are kept.
+    output
+        Where to write the archive file.
+    """
+    hdul = accumulate(_run(date), cache / f"{date:%Y%m%d}", flats)
     output.mkdir(parents=True, exist_ok=True)
     path = output / f"aia94_noise_{date:%Y%m%d}.fits"
-    fits.HDUList(hdus).writeto(path, overwrite=True)
+    hdul.writeto(path, overwrite=True)
     return path

@@ -192,17 +192,16 @@ def _read(run: "aia_94_leak_paper.noise.Run", where: na.ScalarArray) -> u.Quanti
     return np.average(corner["variance"].ndarray[filled], weights=count[filled])
 
 
-def fit(date: datetime.date) -> Noise:
+def fit(run: "aia_94_leak_paper.noise.Run") -> Noise:
     """
     The read noise, and the noiseless signal near disk center, in each
     quadrant of one run.
 
     Parameters
     ----------
-    date
-        A day of :data:`aia_94_leak_paper.eclipses.dates`.
+    run
+        A run, as :func:`aia_94_leak_paper.noise.load` gives it.
     """
-    run = aia_94_leak_paper.noise.load(date)
     reads, slopes, intercepts = [], [], []
     for quadrant in quadrants(run):
         reads.append(_read(run, quadrant))
@@ -210,7 +209,7 @@ def fit(date: datetime.date) -> Noise:
         slopes.append(slope)
         intercepts.append(intercept)
     return Noise(
-        date=date,
+        date=run.date,
         time=run.time,
         exposure=run.exposure,
         read=u.Quantity(reads),
@@ -219,7 +218,7 @@ def fit(date: datetime.date) -> Noise:
     )
 
 
-def noiseless(date: datetime.date) -> na.ScalarArray:
+def noiseless(run: "aia_94_leak_paper.noise.Run") -> na.ScalarArray:
     """
     The noiseless signal of each region of one run, with the read noise and
     the slope of the line held at their values near disk center in its
@@ -227,11 +226,10 @@ def noiseless(date: datetime.date) -> na.ScalarArray:
 
     Parameters
     ----------
-    date
-        A day of :data:`aia_94_leak_paper.eclipses.dates`.
+    run
+        A run, as :func:`aia_94_leak_paper.noise.load` gives it.
     """
-    run = aia_94_leak_paper.noise.load(date)
-    result = fit(date)
+    result = fit(run)
     use = (
         (run.signal >= _signal[0])
         & (run.signal <= 1.5 * _signal[1])
@@ -297,20 +295,19 @@ class Disk:
         return self.amplitude * (1 - self.limb_darkening * (1 - mu))
 
 
-def disk(date: datetime.date) -> Disk:
+def disk(run: "aia_94_leak_paper.noise.Run") -> Disk:
     """
     Fit the map of the noiseless signal of one run, short of the limb, as a
     limb-darkened disk plus a part that grows with the 94 Å signal.
 
     Parameters
     ----------
-    date
-        A day of :data:`aia_94_leak_paper.eclipses.dates`.
+    run
+        A run, as :func:`aia_94_leak_paper.noise.load` gives it.
     """
-    run = aia_94_leak_paper.noise.load(date)
     axes = ("y", "x")
     r = run.r.ndarray_aligned(axes)
-    p = noiseless(date).to_value(u.DN).ndarray_aligned(axes)
+    p = noiseless(run).to_value(u.DN).ndarray_aligned(axes)
     s = run.image.to_value(u.DN).ndarray_aligned(axes)
     use = (r < _disk) & np.isfinite(p)
     median = np.median(s[use])
@@ -318,7 +315,7 @@ def disk(date: datetime.date) -> Disk:
     design = np.stack([np.ones(use.sum()), mu, s[use] - median], axis=-1)
     (a, b, k), *_ = np.linalg.lstsq(design, p[use], rcond=None)
     return Disk(
-        date=date,
+        date=run.date,
         amplitude=(a + b) * u.DN,
         limb_darkening=float(b / (a + b)),
         per_signal=float(k),
@@ -328,7 +325,8 @@ def disk(date: datetime.date) -> Disk:
 
 def history() -> list[Noise]:
     """The noise of the run on every day of :data:`aia_94_leak_paper.eclipses.dates`."""
-    return [fit(date) for date in aia_94_leak_paper.eclipses.dates]
+    load = aia_94_leak_paper.noise.load
+    return [fit(load(date)) for date in aia_94_leak_paper.eclipses.dates]
 
 
 def spread() -> u.Quantity:

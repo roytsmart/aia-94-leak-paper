@@ -2,7 +2,7 @@
 Create the figures and compile the LaTeX files for this article.
 """
 
-from . import dems, eclipses, figures, noise, sections, tables
+from . import dems, eclipses, figures, filters, noise, sections, tables
 from ._acronyms import acronyms
 from ._authors import authors
 from ._document import document, pdf
@@ -17,6 +17,7 @@ __all__ = [
     "document",
     "eclipses",
     "figures",
+    "filters",
     "keywords",
     "noise",
     "pdf",

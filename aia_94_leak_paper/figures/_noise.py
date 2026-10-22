@@ -22,7 +22,7 @@ def noise() -> aastex.FigureStar:
     date = aia_94_leak_paper.figures.date_ingress
     module = aia_94_leak_paper.noise
     run = module.load(date)
-    result = module.fit(date)
+    result = module.fit(run)
     r = run.r
 
     fig, (left, middle, right) = plt.subplots(
@@ -93,7 +93,7 @@ def noise() -> aastex.FigureStar:
 
     # the map of the noiseless signal on the disk; off the limb the slope of
     # the disk does not hold
-    pmap = module.noiseless(date).to_value(u.DN)
+    pmap = module.noiseless(run).to_value(u.DN)
     image = np.where(r < 1, pmap, np.nan).ndarray_aligned(("y", "x"))
     position = run.position
     x, y = position.x.ndarray, position.y.ndarray
@@ -143,7 +143,7 @@ def noise() -> aastex.FigureStar:
         markersize=3,
         label="median of each ring",
     )
-    fitted = module.disk(date)
+    fitted = module.disk(run)
     t = np.linspace(0, 1, 200)
     right.plot(
         t,
