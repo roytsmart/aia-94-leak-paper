@@ -13,9 +13,6 @@ def acronyms() -> list[aastex.Acronym]:
         aastex.Acronym("AIA", "the Atmospheric Imaging Assembly"),
         aastex.Acronym("SDO", "the Solar Dynamics Observatory"),
         aastex.Acronym("SUVI", "the Solar Ultraviolet Imager"),
-        aastex.Acronym(
-            "GOES", "the Geostationary Operational Environmental Satellite", short=True
-        ),
         aastex.Acronym("EVE", "the EUV Variability Experiment"),
         aastex.Acronym("XRT", "the X-Ray Telescope"),
         aastex.Acronym("MaGIXS", "the Marshall Grazing Incidence X-ray Spectrometer"),
