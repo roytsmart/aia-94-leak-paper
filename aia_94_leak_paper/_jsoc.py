@@ -100,12 +100,27 @@ def fetch(source: str, path: pathlib.Path) -> pathlib.Path:
 
 
 def flat(record: str, flats: pathlib.Path) -> np.ndarray:
-    """The flat field named by the ``FLAT_REC`` keyword of an image."""
+    """
+    The flat field named by the ``FLAT_REC`` keyword of an image.
+
+    Some old records are no longer online; JSOC holds their flat fields again
+    as the current records of the same prime keys, ``WAVE_STR`` and
+    ``T_START``, which are used instead.
+    """
     path = flats / record.replace("aia.flatfield[:#", "flat_").replace("]", ".fits")
     if not path.exists():
-        _, paths = retry(
-            lambda: client().query(record, key="WAVELNTH", seg="flatfield"),
+        keys, paths = retry(
+            lambda: client().query(record, key="WAVE_STR,T_START", seg="flatfield"),
             what=record,
         )
-        fetch(paths.flatfield.iloc[0], path)
+        source = paths.flatfield.iloc[0]
+        if "SUM" not in source:
+            wave_str, start = keys.WAVE_STR.iloc[0], keys.T_START.iloc[0]
+            current = f"aia.flatfield[{wave_str}][{start}]"
+            _, paths = retry(
+                lambda: client().query(current, key="WAVE_STR", seg="flatfield"),
+                what=current,
+            )
+            source = paths.flatfield.iloc[0]
+        fetch(source, path)
     return fits.getdata(path).astype(np.float32)
