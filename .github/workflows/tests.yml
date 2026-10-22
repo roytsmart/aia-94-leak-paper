@@ -30,7 +30,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[test]
       # The archives (a few hundred megabytes of eclipses, about a hundred of
-      # the six channels for the DEMs, a few tens of noise) are downloaded from
+      # the six channels for the DEMs, a few tens of noise, a few of the noise
+      # through each focal-plane filter) are downloaded from
       # releases of this repository and checked against the digests in the
       # `_archive.py` modules, so a new version of any is a new key.
       - name: Restore the archives
@@ -39,6 +40,7 @@ jobs:
           path: |
             ~/.cache/aia_94_leak_paper/dems-v*
             ~/.cache/aia_94_leak_paper/eclipses-v*
+            ~/.cache/aia_94_leak_paper/filters-v*
             ~/.cache/aia_94_leak_paper/noise-v*
           key: archives-${{ hashFiles('aia_94_leak_paper/*/_archive.py') }}
       # The fits of the leak in each eclipse, and the DEMs of each day, take a

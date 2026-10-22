@@ -71,7 +71,7 @@ def records(
     keys, paths = retry(
         lambda: client().query(
             query,
-            key="T_OBS,WAVELNTH,EXPTIME,FLAT_REC,FSN,QUALITY",
+            key="T_OBS,WAVELNTH,WAVE_STR,EXPTIME,FLAT_REC,FSN,QUALITY",
             seg=",".join(segments),
         ),
         what=query,

@@ -51,8 +51,9 @@ def variables() -> list[aastex.Variable]:
     rate = (u.DN, u.s**-1)
     first, last = leaks[0], leaks[-1]
     fraction = (last.center / last.quiet).to_value(u.percent)
-    noise = aia_94_leak_paper.noise.fit(date_ingress)
-    disk = aia_94_leak_paper.noise.disk(date_ingress)
+    run = aia_94_leak_paper.noise.load(date_ingress)
+    noise = aia_94_leak_paper.noise.fit(run)
+    disk = aia_94_leak_paper.noise.disk(run)
     # the noise method measures the leak once the leak is three times the
     # typical spread of the method among the quadrants of the detector
     history = aia_94_leak_paper.noise.history()
@@ -65,6 +66,9 @@ def variables() -> list[aastex.Variable]:
         if m
     ]
     ratios = [(n.rate / k.center).to_value(u.percent) for n, k in measured]
+    filters = aia_94_leak_paper.filters
+    attenuation = filters.attenuation()
+    gap = filters.load("thin").time - filters.load("thick").time
     dems = aia_94_leak_paper.dems
     date_dem = dems.date_dem
     shown = dems.summary(date_dem)
@@ -152,6 +156,58 @@ def variables() -> list[aastex.Variable]:
         aastex.Variable(
             name="noiseRatioMax",
             value=aastex.NoEscape(rf"{_significant(max(ratios) * u.one).value:g}\%"),
+        ),
+        # the day the channel observed through its thick focal-plane filter,
+        # how far apart the runs through each filter began, how much more
+        # zirconium the thick filter has, and the band they are compared in
+        aastex.Variable(
+            name="filterDate",
+            value=aastex.NoEscape(
+                f"{filters.switch:%Y} {filters.switch:%B} {filters.switch.day}"
+            ),
+        ),
+        aastex.Variable(name="filterGap", value=_significant(gap.to(u.min))),
+        aastex.Variable(
+            name="filterZirconium",
+            value=filters.zirconium["thick"] - filters.zirconium["thin"],
+        ),
+        aastex.Variable(
+            name="filterBand",
+            value=aastex.NoEscape(rf"\ensuremath{{{filters.band:g}\,R_\odot}}"),
+        ),
+        # how much the thick filter passes, relative to the thin one, of the
+        # EUV (from the structure of the corona, and as the calibration
+        # expects) and of the leak (from the noise, with its spread among the
+        # quadrants, and from the signals alone)
+        aastex.Variable(
+            name="filterEUV",
+            value=aastex.NoEscape(
+                rf"\ensuremath{{{_significant(attenuation.euv * u.one).value:g}}}"
+            ),
+        ),
+        aastex.Variable(
+            name="filterTable",
+            value=aastex.NoEscape(
+                rf"\ensuremath{{{_significant(filters.euv_table * u.one).value:g}}}"
+            ),
+        ),
+        aastex.Variable(
+            name="filterLeak",
+            value=aastex.NoEscape(
+                rf"\ensuremath{{{_significant(attenuation.leak * u.one).value:g}}}"
+            ),
+        ),
+        aastex.Variable(
+            name="filterLeakSpread",
+            value=aastex.NoEscape(
+                rf"\ensuremath{{{_significant(attenuation.leak_spread * u.one, digits=1).value:g}}}"
+            ),
+        ),
+        aastex.Variable(
+            name="filterLeakSignals",
+            value=aastex.NoEscape(
+                rf"\ensuremath{{{_significant(attenuation.leak_signals * u.one).value:g}}}"
+            ),
         ),
         # the day whose DEMs are shown, the temperature above which plasma
         # counts as hot, and how much of the emission measure of its coronal

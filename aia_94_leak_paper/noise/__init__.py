@@ -3,8 +3,8 @@ The leak found in the noise of AIA 94 Å: on the disk, part of the signal
 carries no photon noise.
 """
 
-from ._archive import Run, archive, load, sha256, url, version
-from ._build import build, edges, frames, region
+from ._archive import Run, archive, load, read, sha256, url, version
+from ._build import accumulate, build, edges, frames, region, usable
 from ._model import (
     Disk,
     Noise,
@@ -22,6 +22,7 @@ __all__ = [
     "Disk",
     "Noise",
     "Run",
+    "accumulate",
     "archive",
     "build",
     "disk",
@@ -34,9 +35,11 @@ __all__ = [
     "noiseless",
     "pooled",
     "quadrants",
+    "read",
     "region",
     "sha256",
     "spread",
     "url",
+    "usable",
     "version",
 ]
