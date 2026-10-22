@@ -1,5 +1,6 @@
 import aastex
 import astropy.units as u
+import matplotlib.patches
 import matplotlib.pyplot as plt
 import matplotlib.ticker
 import numpy as np
@@ -10,11 +11,14 @@ __all__ = [
     "entrance",
 ]
 
+_spacing = 5
+"""The years between the examples of the images, the last of which is the last image."""
+
 
 def entrance() -> aastex.FigureStar:
     """
-    The brightness of the images without a focal-plane filter against the
-    leak in the eclipses, near the limb, and the ratio of the two.
+    Examples of the images without a focal-plane filter, their brightness
+    against the leak in the eclipses near the limb, and the ratio of the two.
     """
     module = aia_94_leak_paper.entrance
     monitor = module.load()
@@ -24,11 +28,55 @@ def entrance() -> aastex.FigureStar:
     year = comparison.time.decimalyear
     dominant = comparison.dominant
 
-    fig, (left, right) = plt.subplots(
-        ncols=2,
-        figsize=(aastex.text_width_inches, 2.5),
+    fig = plt.figure(
+        figsize=(aastex.text_width_inches, 4.7),
         constrained_layout=True,
     )
+    top, bottom = fig.subfigures(nrows=2, height_ratios=[2.1, 2.6])
+    examples = top.subplots(ncols=4, sharex=True, sharey=True)
+    left, right = bottom.subplots(ncols=2)
+
+    # examples of the images, each divided by its brightness in the ring,
+    # blank where a pixel of a bin is saturated
+    taken = monitor.time.decimalyear
+    targets = taken[0] + _spacing * np.arange(len(examples) - 1)
+    index = [int(np.argmin(np.abs(taken - t))) for t in targets] + [taken.size - 1]
+    images = monitor.images.to_value(rate).ndarray_aligned(("time", "y", "x"))
+    position = monitor.position
+    cmap = plt.get_cmap("gray").with_extremes(bad="tab:blue")
+    for ax, i in zip(examples, index):
+        x = position.x[{"time": i}].ndarray
+        y = position.y[{"time": i}].ndarray
+        im = ax.imshow(
+            images[i] / brightness[i].to_value(rate),
+            origin="lower",
+            extent=[x[0], x[-1], y[0], y[-1]],
+            cmap=cmap,
+            vmin=0,
+            vmax=2,
+            interpolation="none",
+        )
+        for radius in module.ring:
+            ax.add_patch(
+                matplotlib.patches.Circle(
+                    (0, 0),
+                    radius,
+                    fill=False,
+                    color="white",
+                    linewidth=0.5,
+                    linestyle="dashed",
+                )
+            )
+        day = monitor.time[i].datetime
+        ax.set_title(f"{day.year} {day:%B} {day.day}", fontsize=8)
+        ax.set_xlim(-1.3, 1.3)
+        ax.set_ylim(-1.3, 1.3)
+        ax.set_xticks([-1, 0, 1])
+        ax.set_yticks([-1, 0, 1])
+        ax.set_xlabel(r"$x$ ($R_\odot$)")
+    examples[0].set_ylabel(r"$y$ ($R_\odot$)")
+    bar = top.colorbar(im, ax=examples, shrink=0.9)
+    bar.set_label("image / brightness")
 
     # the images on the right axis, scaled by the mean ratio, so that the
     # leak on the left coincides with them where the ratio holds
@@ -95,11 +143,15 @@ def entrance() -> aastex.FigureStar:
     figure.add_caption(
         aastex.NoEscape(r"""
 The images of the 94 and 304\,\AA\ telescope taken without a focal-plane filter, one a month since
-\entranceFirst, against the leak, both in the ring at \entranceRing, in the units of the detector.
-Left: the leak in each eclipse (red), through the point spread function fit to the eclipses, and
-the brightness of the images (gray, right axis), scaled by the mean ratio of the two.
-Right: the ratio of the leak to the brightness of the images at the time of each eclipse, with its
-mean and scatter (gray) over the eclipses since the leak in the ring was \entranceDominant\ times
-its mean before \yearOnset\ (filled).""")
+\entranceFirst, against the leak.
+Top: four of the images, from the first to the last, in bins of $16 \times 16$ pixels, each divided
+by its brightness, the median of its bins in the ring at \entranceRing\ (dashed).
+Bins with a saturated pixel are blank (blue).
+Bottom left: the leak in each eclipse (red), through the point spread function fit to the eclipses,
+and the brightness of the images (gray, right axis), scaled by the mean ratio of the two, both in
+the ring and in the units of the detector.
+Bottom right: the ratio of the leak to the brightness of the images at the time of each eclipse,
+with its mean and scatter (gray) over the eclipses since the leak in the ring was
+\entranceDominant\ times its mean before \yearOnset\ (filled).""")
     )
     return figure
