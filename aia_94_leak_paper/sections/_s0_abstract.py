@@ -22,8 +22,9 @@ and it can be seen directly as \SDO\ passes into the shadow of the Earth, where 
 In \numEclipses\ such eclipses between \yearFirst\ and \yearLast, the leak at disk center grew
 from \leakFirst\ to \leakLast, exponentially since \yearOnset\ with a doubling time of
 \doublingTime, and it is now \leakFractionQuietSun\ of the quiet-Sun signal in the channel.
-Cross-calibration with \SUVI\ on \GOESShort-18 and \GOESShort-19 and the noise of the channel
-itself give the same history.
+Since \entranceSince\ it has been a constant part of the visible light that passes the entrance
+filters, which the instrument monitors with images taken without a focal-plane filter, and the
+noise of the channel itself gives the same history.
 Left in the data, the leak appears in \DEMs\ as hot plasma in the quiet Sun and in coronal holes,
 it biases maps of \FeXVIII, and it hides part of the degradation of the channel from its
 calibration.

@@ -25,8 +25,10 @@ The leak is measured four independent ways, and each gets its own section:
   gives its history since 2010.
 - **Independent checks.** The thick focal-plane filter (1000 Å more Zr)
   attenuates it only as much as the EUV, so it passes that filter through
-  openings rather than the metal; the 304 Å channel (same telescope and CCD)
-  has none; SUVI on GOES-16, -18, and -19 gives the same history.
+  openings rather than the metal; the images AIA takes without a focal-plane
+  filter (`304_OPEN`, monitoring the visible light through the entrance
+  filters) grow with it, at a constant ratio since 2020; the 304 Å channel
+  (same telescope and CCD, aluminum focal-plane filter) has none.
 - **Consequences and a correction.** DEMs (hot quiet Sun and coronal holes),
   Fe XVIII maps, the degradation calibration, and published results that show
   its symptoms.
@@ -42,20 +44,23 @@ Roy T. Smart is the corresponding author, then Charles C. Kankelborg.
   `_preamble.py`), which renders as a gray bulleted list, so the plan cannot be
   mistaken for the article.
 - **Where the analysis lives.** Analysis specific to this article (the noise
-  fits, the eclipse forward model, the SUVI cross-calibration) lives here as
+  fits, the eclipse forward model, the comparison with the open-filter images) lives here as
   thin modules. Anything reusable may move down the stack (`sdo`, `utu`,
   `named-arrays`) only after the user agrees to the new library API.
 - **Data.** AIA level 1 images come from JSOC (`aia.lev1_euv_12s`, by SUMS path
   through `drms`), the synoptic level 1.5 images for the DEMs from
   `jsoc1.stanford.edu/data/aia/synoptic`, AIA flat fields from
-  `aia.flatfield`, and SUVI level 2 composites from NOAA NCEI. Cache
-  downloads, and keep the number of parallel requests to JSOC small (it
-  answers 12 at once with HTTP 503).
+  `aia.flatfield`, and the images without a focal-plane filter from
+  `aia.lev1` (`WAVE_STR='304_OPEN'`, segment `image_lev1`). Cache downloads,
+  keep the number of parallel requests to JSOC small (it answers 12 at once
+  with HTTP 503), and keep `aia.lev1` queries to short windows: month-long
+  ones with a `WAVE_STR` condition time out or are killed.
 - **The archives.** Each of `eclipses` (the ingresses, binned 16 x 16),
   `noise` (the noon runs, reduced to statistics per region), `filters` (a run
-  through each focal-plane filter on 2026-03-07, reduced the same way), and
-  `dems` (the six coronal channels at noon, binned to 4.8 arcsec, with the
-  94 Å flat field) is built from JSOC by `python -m aia_94_leak_paper.<name> build` (needs
+  through each focal-plane filter on 2026-03-07, reduced the same way),
+  `entrance` (one image a month without a focal-plane filter, binned
+  16 x 16), and `dems` (the six coronal channels at noon, binned to 4.8
+  arcsec, with the 94 Å flat field) is built from JSOC by `python -m aia_94_leak_paper.<name> build` (needs
   `.[data]`), bundled by `... pack`, and published as an asset of the release
   named by `<name>.version`; the article reads them through `<name>.load`,
   which downloads the asset once and checks its SHA-256. A change to what a

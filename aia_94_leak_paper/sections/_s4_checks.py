@@ -30,14 +30,31 @@ def checks() -> aastex.Section:
     magnitude more by the extra zirconium, so the leak passes the filter through openings in it or
     around it rather than through the metal.
     \roy{Cite the optical constants of zirconium in the visible.}
+\item \textbf{The entrance filters.}
+    The zirconium entrance filters of the channel pass enough visible light to image the
+    photosphere, and \AIA\ monitors them with images taken without a focal-plane
+    filter~\citep{Boerner2012}.
+    Without one, the light of both halves of the aperture of the 94 and 304\,\AA\ telescope reaches
+    the detector: such an image records the visible light that reaches the focal-plane filter.
+    One a month since the first, in \entranceFirst, they brightened by a factor of \entranceGrowth\
+    in the ring at \entranceRing, where the detector stays in its linear range
+    (Figure~\ref{fig:entrance}, left).
+    In every eclipse since \entranceSince, once the leak in that ring was \entranceDominant\ times
+    its mean before \yearOnset, it has been \entranceRatio\ of the brightness of these images there,
+    with a scatter of \entranceScatter, while it grew by a factor of \entranceGrowthSince\
+    (Figure~\ref{fig:entrance}, right).
+    Before, the ratio was higher, \entranceRatioFirst\ times as high in \entranceRatioFirstYear,
+    when the leak was mostly the faint glow seen before the onset.
+    So the leak grows because the entrance filters pass more and more visible light, of which the
+    focal-plane filter passes a constant part.
+    \roy{The images look more limb-darkened than the model of the leak; compare the radial
+    profiles.}
 \item \textbf{The other channels.}
-    The 304\,\AA\ channel shares the telescope and the \CCD\ but has no leak, so the leak is in the
-    filters of the 94\,\AA\ half of the aperture.
+    The 304\,\AA\ channel shares the telescope, the \CCD, and the visible light that reaches the
+    focal-plane filter, but has no leak, so the leak passes the zirconium focal-plane filter of
+    94\,\AA\ and not the aluminum one of 304\,\AA.
     What the noise says, and cannot say, about the 131, 171, 193, 211, and 335\,\AA\ channels.
-\item \textbf{\SUVI.}
-    A joint fit of \AIA\ to \SUVI\ on \GOESShort-16, \GOESShort-18, and \GOESShort-19 with a
-    limb-darkened term on the disk and a constant gives the same history, the constant being the
-    halo.
 \end{outline}""")
     result.append(aia_94_leak_paper.figures.filters())
+    result.append(aia_94_leak_paper.figures.entrance())
     return result

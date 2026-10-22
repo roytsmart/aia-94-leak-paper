@@ -69,6 +69,11 @@ def variables() -> list[aastex.Variable]:
     filters = aia_94_leak_paper.filters
     attenuation = filters.attenuation()
     gap = filters.load("thin").time - filters.load("thick").time
+    entrance = aia_94_leak_paper.entrance
+    monitor = entrance.load()
+    bright = entrance.brightness(monitor)
+    comparison = entrance.compare()
+    first_dominant = int(np.flatnonzero(comparison.dominant)[0])
     dems = aia_94_leak_paper.dems
     date_dem = dems.date_dem
     shown = dems.summary(date_dem)
@@ -209,6 +214,52 @@ def variables() -> list[aastex.Variable]:
                 rf"\ensuremath{{{_significant(attenuation.leak_signals * u.one).value:g}}}"
             ),
         ),
+        # the images without a focal-plane filter: the month of the first, the
+        # ring they are compared with the leak in, and how much they have
+        # brightened there since the first
+        aastex.Variable(
+            name="entranceFirst",
+            value=aastex.NoEscape(f"{monitor.time[0].datetime:%Y %B}"),
+        ),
+        aastex.Variable(
+            name="entranceRing",
+            value=aastex.NoEscape(
+                rf"{entrance.ring[0]:g}--{entrance.ring[1]:g}\,\ensuremath{{R_\odot}}"
+            ),
+        ),
+        aastex.Variable(
+            name="entranceGrowth",
+            value=aastex.NoEscape(f"{_significant(bright[-1] / bright[0]).value:g}"),
+        ),
+        # the leak against them: since when it dominates the glow before the
+        # onset, its mean ratio to them since then and the scatter of that,
+        # how much the leak grew meanwhile, and how much higher the ratio was
+        # in the first eclipse with an image
+        aastex.Variable(name="entranceDominant", value=entrance.dominance),
+        aastex.Variable(
+            name="entranceSince", value=comparison.dates[first_dominant].year
+        ),
+        aastex.Variable(
+            name="entranceRatio",
+            value=aastex.NoEscape(
+                rf"\ensuremath{{{_significant(comparison.ratio_mean * 1e7 * u.one).value:g}"
+                r" \times 10^{-7}}"
+            ),
+        ),
+        aastex.Variable(name="entranceScatter", value=_percent(comparison.scatter)),
+        aastex.Variable(
+            name="entranceGrowthSince",
+            value=aastex.NoEscape(
+                f"{_significant(comparison.leak[-1] / comparison.leak[first_dominant]).value:g}"
+            ),
+        ),
+        aastex.Variable(
+            name="entranceRatioFirst",
+            value=aastex.NoEscape(
+                f"{_significant(comparison.ratio[0] / comparison.ratio_mean * u.one).value:g}"
+            ),
+        ),
+        aastex.Variable(name="entranceRatioFirstYear", value=comparison.dates[0].year),
         # the day whose DEMs are shown, the temperature above which plasma
         # counts as hot, and how much of the emission measure of its coronal
         # holes and quiet Sun is hot, as observed and with the leak subtracted

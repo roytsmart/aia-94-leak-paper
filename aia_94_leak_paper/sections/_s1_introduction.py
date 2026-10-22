@@ -37,8 +37,9 @@ def introduction() -> aastex.Section:
 \item \textbf{Roadmap.}
     Section~\ref{sec:PhotonNoise} finds a noiseless signal in the channel,
     Section~\ref{sec:EarthEclipses} measures it directly in eclipses over the mission,
-    Section~\ref{sec:IndependentChecks} confirms it with the focal-plane filters, the other
-    channels, and \SUVI, Section~\ref{sec:Consequences} follows it into thermal diagnostics and
+    Section~\ref{sec:IndependentChecks} confirms it with the focal-plane filters, the images taken
+    without one, and the other channels, Section~\ref{sec:Consequences} follows it into thermal
+    diagnostics and
     calibration, Section~\ref{sec:ACorrection} gives a correction, and
     Section~\ref{sec:Conclusions} concludes.
 \end{outline}""")
