@@ -36,19 +36,24 @@ def checks() -> aastex.Section:
     filter~\citep{Boerner2012}.
     Without one, the light of both halves of the aperture of the 94 and 304\,\AA\ telescope reaches
     the detector: such an image records the visible light that reaches the focal-plane filter.
+    The images show the photosphere, darkened toward the limb and with its sunspots, and also
+    arcs and streaks of light that are not on the Sun and change over the years
+    (Figure~\ref{fig:entrance}, top).
     One a month since the first, in \entranceFirst, they brightened by a factor of \entranceGrowth\
     in the ring at \entranceRing, where the detector stays in its linear range
-    (Figure~\ref{fig:entrance}, left).
+    (Figure~\ref{fig:entrance}, bottom left).
     In every eclipse since \entranceSince, once the leak in that ring was \entranceDominant\ times
     its mean before \yearOnset, it has been \entranceRatio\ of the brightness of these images there,
     with a scatter of \entranceScatter, while it grew by a factor of \entranceGrowthSince\
-    (Figure~\ref{fig:entrance}, right).
+    (Figure~\ref{fig:entrance}, bottom right).
     Before, the ratio was higher, \entranceRatioFirst\ times as high in \entranceRatioFirstYear,
     when the leak was mostly the faint glow seen before the onset.
     So the leak grows because the entrance filters pass more and more visible light, of which the
     focal-plane filter passes a constant part.
     \roy{The images look more limb-darkened than the model of the leak; compare the radial
     profiles.}
+    \roy{The arcs and streaks cross the ring; show that the ratio does not depend on the
+    statistic of the ring, and find where they come from.}
 \item \textbf{The other channels.}
     The 304\,\AA\ channel shares the telescope, the \CCD, and the visible light that reaches the
     focal-plane filter, but has no leak, so the leak passes the zirconium focal-plane filter of
