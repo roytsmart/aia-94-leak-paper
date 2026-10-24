@@ -30,7 +30,7 @@ __all__ = [
     "version",
 ]
 
-version: str = "entrance-v1"
+version: str = "entrance-v2"
 """The release of this repository the archive is an asset of."""
 
 url: str = (
@@ -39,7 +39,7 @@ url: str = (
 )
 """Where the archive is published."""
 
-sha256: str = "37be678f7343c3f95b5f3a8b98234803c02d1c54872f193343960060acdc2a5a"
+sha256: str = "4654597f5dfc821b4bb1afd810572de53c1a346628d3a7f9c3e75688f0520fa8"
 """The SHA-256 digest of the archive, checked after every download."""
 
 
@@ -95,7 +95,7 @@ class Monitor:
     """The exposure time of each image."""
 
     images: na.ScalarArray
-    """The mean of each bin per second, blank where a pixel of the bin is saturated."""
+    """The mean of each bin per second, blank where a pixel of the bin is missing."""
 
     center: na.Cartesian2dVectorArray
     """The center of the solar disk in each image, in bins from the corner of the first."""

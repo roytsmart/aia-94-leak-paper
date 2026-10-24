@@ -13,6 +13,20 @@ def test_load():
     assert monitor.images.shape["time"] > 150
     assert np.all(np.diff(monitor.time.mjd) > 0)
     assert np.all(monitor.exposure < 0.006 * u.s)
+    # every bin is kept, also where the camera is past its linear range
+    assert np.all(np.isfinite(monitor.images))
+
+
+def test_linear():
+    monitor = entrance.load()
+    axes = ("time", "y", "x")
+    signal = (monitor.images * monitor.exposure).to_value(u.DN).ndarray_aligned(axes)
+    r = monitor.r.ndarray_aligned(axes)
+    # the center of the disk of the last image is past the linear range of the
+    # camera, while the ring the images are compared in never is
+    assert np.median(signal[-1][r[-1] < 0.2]) > entrance.linear.to_value(u.DN)
+    ring = entrance.brightness(monitor) * monitor.exposure.ndarray
+    assert np.all(ring < entrance.linear)
 
 
 def test_brightness():

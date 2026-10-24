@@ -6,12 +6,13 @@ The entrance filters of AIA are monitored for leakage of visible light by
 images taken with the filter wheel at its open position, without a
 focal-plane filter (Boerner et al. 2012). The telescope that holds the
 94 Å and 304 Å channels names these images :data:`wave_str`. A set of them
-is taken every week, a little after 20:00 UT; for each month of the
-mission, the first image of the month with a short exposure is fetched,
-returned to the units of the detector by multiplying it by the flat field it
-was divided by, divided by its exposure time, and averaged over square bins.
-Bins with a saturated pixel are left blank. Every month is written to one
-FITS file.
+is taken a little after 20:00 UT, every week early in the mission and every
+two weeks later; for each month of the mission, the first image of the
+month with a short exposure is fetched, returned to the units of the
+detector by multiplying it by the flat field it was divided by, divided by
+its exposure time, and averaged over square bins. Every pixel is kept, also
+where the disk is brighter than the camera is linear to, and a bin is blank
+only where a pixel is missing. Every month is written to one FITS file.
 """
 
 import datetime
@@ -42,9 +43,6 @@ _series = "aia.lev1"
 
 _exposure = (0.003, 0.006)
 """The range of the short exposures, in seconds; the longer ones saturate the disk."""
-
-_saturated = 15000
-"""The signal in DN of the detector above which a pixel is taken as saturated."""
 
 _evening = (datetime.time(20), 45 * 60)
 """When on each day the sets are searched for, and for how many seconds."""
@@ -116,7 +114,7 @@ def _reduce(path: pathlib.Path, flats: pathlib.Path) -> tuple[np.ndarray, dict]:
     raw = image * _jsoc.flat(header["FLAT_REC"], flats)
     n = 4096 // binning
     blocks = raw.reshape(n, binning, n, binning)
-    good = np.isfinite(blocks) & (blocks < _saturated)
+    good = np.isfinite(blocks)
     with np.errstate(invalid="ignore"):
         mean = np.where(good, blocks, 0).sum(axis=(1, 3)) / good.sum(axis=(1, 3))
     mean = np.where(good.all(axis=(1, 3)), mean, np.nan)
@@ -129,7 +127,8 @@ def _reduce(path: pathlib.Path, flats: pathlib.Path) -> tuple[np.ndarray, dict]:
         "CRPIX2": header["CRPIX2"],
         "R_SUN": header["R_SUN"],
         "DATAMAX": header["DATAMAX"],
-        "NSAT": int((~np.isfinite(raw) | (raw >= _saturated)).sum()),
+        # the pixels above 15000 DN of level 1, which AIA counts as saturated
+        "NSATPIX": header["NSATPIX"],
     }
     return (mean / header["EXPTIME"]).astype(np.float32), keys
 
@@ -181,7 +180,6 @@ def build(
     p = primary.header
     p["WAVE_STR"] = (wave_str, "every image is without a focal-plane filter")
     p["BINNING"] = (binning, "pixels along each side of a bin")
-    p["SATURATE"] = (_saturated, "DN above which a pixel is saturated")
     p["UNITS"] = ("DN/s", "level 1 times its flat field, per second")
     p["CREATOR"] = (
         f"aia-94-leak-paper {importlib.metadata.version('aia-94-leak-paper')}",
@@ -199,7 +197,7 @@ def build(
             fits.Column(name="CRPIX2", format="D", array=[r["CRPIX2"] for r in rows]),
             fits.Column(name="R_SUN", format="D", array=[r["R_SUN"] for r in rows]),
             fits.Column(name="DATAMAX", format="D", array=[r["DATAMAX"] for r in rows]),
-            fits.Column(name="NSAT", format="K", array=[r["NSAT"] for r in rows]),
+            fits.Column(name="NSATPIX", format="K", array=[r["NSATPIX"] for r in rows]),
         ],
         name="FRAMES",
     )

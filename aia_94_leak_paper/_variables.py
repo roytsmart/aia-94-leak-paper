@@ -227,6 +227,7 @@ def variables() -> list[aastex.Variable]:
                 rf"{entrance.ring[0]:g}--{entrance.ring[1]:g}\,\ensuremath{{R_\odot}}"
             ),
         ),
+        aastex.Variable(name="entranceLinear", value=entrance.linear),
         aastex.Variable(
             name="entranceGrowth",
             value=aastex.NoEscape(f"{_significant(bright[-1] / bright[0]).value:g}"),
