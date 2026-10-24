@@ -36,13 +36,11 @@ def entrance() -> aastex.FigureStar:
     examples = top.subplots(ncols=4, sharex=True, sharey=True)
     left, right = bottom.subplots(ncols=2)
 
-    # examples of the images, each divided by its brightness in the ring,
-    # outlined where they are brighter than the camera is linear to
+    # examples of the images, each divided by its brightness in the ring
     taken = monitor.time.decimalyear
     targets = taken[0] + _spacing * np.arange(len(examples) - 1)
     index = [int(np.argmin(np.abs(taken - t))) for t in targets] + [taken.size - 1]
     images = monitor.images.to_value(rate).ndarray_aligned(("time", "y", "x"))
-    exposure = monitor.exposure.to_value(u.s).ndarray
     position = monitor.position
     for ax, i in zip(examples, index):
         x = position.x[{"time": i}].ndarray
@@ -55,14 +53,6 @@ def entrance() -> aastex.FigureStar:
             vmin=0,
             vmax=2,
             interpolation="none",
-        )
-        ax.contour(
-            x,
-            y,
-            images[i] * exposure[i],
-            levels=[module.linear.to_value(u.DN)],
-            colors="tab:orange",
-            linewidths=0.6,
         )
         for radius in module.ring:
             ax.add_patch(
@@ -154,8 +144,6 @@ The images of the 94 and 304\,\AA\ telescope taken without a focal-plane filter,
 \entranceFirst, against the leak.
 Top: four of the images, from the first to the last, in bins of $16 \times 16$ pixels, each divided
 by its brightness, the median of its bins in the ring at \entranceRing\ (dashed).
-Inside the contour (orange) the image is above \entranceLinear, the signal up to which the camera is
-linear~\citep{Boerner2012}.
 Bottom left: the leak in each eclipse (red), through the point spread function fit to the eclipses,
 and the brightness of the images (gray, right axis), scaled by the mean ratio of the two, both in
 the ring and in the units of the detector.
