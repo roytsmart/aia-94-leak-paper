@@ -13,6 +13,7 @@ from ._model import (
     dominance,
     growth,
     leak,
+    linear,
     ring,
 )
 
@@ -27,6 +28,7 @@ __all__ = [
     "dominance",
     "growth",
     "leak",
+    "linear",
     "load",
     "months",
     "ring",

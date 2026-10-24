@@ -9,9 +9,10 @@ to the brightness of the images at the time is constant.
 
 Both are compared in a ring near the limb, :data:`ring`, rather than at
 disk center, which in the images has passed the range over which the
-detector is linear: the short images reach 11,000 DN at disk center in
-2024 and 14,000 DN in 2026, and the detector is linear to 1% up to 11,000 DN
-(Boerner et al. 2012), while the ring stays below 9,000 DN.
+detector is linear, :data:`linear`: the short images reach 11,000 DN at disk
+center in 2024 and 14,000 DN in 2026. By 2026 part of the ring has passed it
+too, but the median of the ring, which :func:`brightness` takes, stays
+within it.
 """
 
 import dataclasses
@@ -31,11 +32,15 @@ __all__ = [
     "dominance",
     "growth",
     "leak",
+    "linear",
     "ring",
 ]
 
 ring: tuple[float, float] = (0.85, 0.9)
 """The ring the images and the leak are compared in, in solar radii."""
+
+linear: u.Quantity = 11000 * u.DN
+"""The signal up to which the camera is linear to better than 1% (Boerner et al. 2012)."""
 
 dominance: int = 3
 """

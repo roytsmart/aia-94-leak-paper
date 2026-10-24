@@ -40,8 +40,8 @@ def checks() -> aastex.Section:
     arcs and streaks of light that are not on the Sun and change over the years
     (Figure~\ref{fig:entrance}, top).
     One a month since the first, in \entranceFirst, they brightened by a factor of \entranceGrowth\
-    in the ring at \entranceRing, where the detector stays in its linear range
-    (Figure~\ref{fig:entrance}, bottom left).
+    in the ring at \entranceRing, measured by the median of its bins, which stays in the linear
+    range of the camera (Figure~\ref{fig:entrance}, bottom left).
     In every eclipse since \entranceSince, once the leak in that ring was \entranceDominant\ times
     its mean before \yearOnset, it has been \entranceRatio\ of the brightness of these images there,
     with a scatter of \entranceScatter, while it grew by a factor of \entranceGrowthSince\
