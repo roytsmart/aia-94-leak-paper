@@ -55,7 +55,9 @@ Roy T. Smart is the corresponding author, then Charles C. Kankelborg.
   keep the number of parallel requests to JSOC small (it answers 12 at once
   with HTTP 503), and keep `aia.lev1` queries to short windows: month-long
   ones with a `WAVE_STR` condition time out or are killed.
-- **The archives.** Each of `eclipses` (the ingresses, binned 16 x 16),
+- **The archives.** Each of `eclipses` (the ingresses in level 1, binned
+  16 x 16, with the 94 Å flat field; the leak is fit flat fielded, since it
+  reaches the detector as the EUV does),
   `noise` (the noon runs, reduced to statistics per region), `filters` (a run
   through each focal-plane filter on 2026-03-07, reduced the same way),
   `entrance` (one image a month without a focal-plane filter, binned

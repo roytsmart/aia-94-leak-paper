@@ -53,9 +53,10 @@ def ingress() -> aastex.FigureStar:
         frames = (
             eclipse.images[f"INGRESS{channel}"] / eclipse.exposures[f"INGRESS{channel}"]
         )
-        dark = (
-            eclipse.images[f"UMBRA{channel}"] / eclipse.exposures[f"UMBRA{channel}"]
-        ).mean("time")
+        dark = np.median(
+            eclipse.images[f"UMBRA{channel}"] / eclipse.exposures[f"UMBRA{channel}"],
+            axis="time",
+        )
         rate = (frames - dark).to(u.DN / u.s)
         if channel == 94:
             # as the leak is fit, in the units of the detector at disk center
@@ -90,7 +91,8 @@ def ingress() -> aastex.FigureStar:
         aastex.NoEscape(r"""
 The ingress of the eclipse of \ingressDate\ in the 94\,\AA\ (top) and 171\,\AA\ (bottom) channels,
 at the times marked after the 171\,\AA\ disk mean began to fall.
-Each frame is level~1, averaged over $16 \times 16$ pixels, less the umbra, and divided by its
+Each frame is level~1, averaged over $16 \times 16$ pixels, less the median of the umbra just after
+the ingress, and divided by its
 exposure time; 94\,\AA\ is multiplied by the flat field at disk center, so that it is in the units of
 the detector there.
 The atmosphere absorbs the \EUV\ from the lower right, and the corona of both channels goes with it,

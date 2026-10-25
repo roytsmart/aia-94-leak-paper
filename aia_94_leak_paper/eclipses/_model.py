@@ -173,8 +173,10 @@ def _ingress(eclipse: "aia_94_leak_paper.eclipses.Eclipse") -> _Ingress:
         return images[key] / exposures[key]
 
     # when 171 falls through half its value before the eclipse, in each bin;
-    # the corners beyond the field stop see nothing, and divide by zero
-    dark171 = rate("UMBRA171").mean("time")
+    # the corners beyond the field stop see nothing, and divide by zero; the
+    # dark is the median of the umbra, which a particle hit in one frame of
+    # it would otherwise print into every frame of its bin
+    dark171 = np.median(rate("UMBRA171"), axis="time")
     t171 = _seconds(eclipse.times["INGRESS171"], eclipse.start)
     with np.errstate(divide="ignore", invalid="ignore"):
         transmission = (rate("INGRESS171") - dark171) / (
@@ -216,7 +218,7 @@ def _ingress(eclipse: "aia_94_leak_paper.eclipses.Eclipse") -> _Ingress:
     def scaled(key: str) -> na.ScalarArray:
         return images[key] * eclipse.flat_center * exposure / exposures[key]
 
-    dark = scaled("UMBRA94").mean("time")
+    dark = np.median(scaled("UMBRA94"), axis="time")
     data = scaled("INGRESS94") - dark
 
     # each bin before its edge, from its own frames where there are any

@@ -26,8 +26,8 @@ def eclipses() -> aastex.Section:
     \EUV\ is, and multiplied by the flat field at disk center to keep the units of the detector
     there; in the units of the detector the leak carries the pattern of the flat field, with a step
     at the edge of each quadrant from the gain of its amplifier.
-    The dark is the umbra just after the whole disk has set, rather than minutes later, since the
-    offset of each quadrant drifts.
+    The dark is the median of the umbra just after the whole disk has set, rather than minutes
+    later, since the offset of each quadrant drifts.
 \item \textbf{Results.}
     The leak at disk center in \numEclipses\ eclipses from \yearFirst\ to \yearLast: from
     \leakFirst\ to \leakLast, with a doubling time of \doublingTime\ since \yearOnset\
