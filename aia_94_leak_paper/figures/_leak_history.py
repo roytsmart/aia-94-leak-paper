@@ -80,8 +80,9 @@ def leak_history() -> aastex.Figure:
     result.add_fig(fig, width=aastex.NoEscape(r"\columnwidth"))
     result.add_caption(
         aastex.NoEscape(r"""
-The leak in the \numEclipses\ eclipse ingresses, in the units of the detector, at disk center
-(filled circles) and just off the limb (open circles), each with the whole disk up, and the
+The leak in the \numEclipses\ eclipse ingresses, flat fielded and in the units of the detector at
+disk center, at disk center (filled circles) and just off the limb (open circles), each with the
+whole disk up, and the
 noiseless signal near disk center in a run at noon of each day (triangles), with its spread among
 the quadrants of the detector; it is open where the leak is less than three times the typical
 spread, \noiseSpread, and the noise does not measure it.

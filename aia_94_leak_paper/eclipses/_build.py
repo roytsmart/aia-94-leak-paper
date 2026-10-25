@@ -4,10 +4,11 @@ Build the archive of eclipse ingresses from the AIA level-1 images at JSOC.
 For each day in :data:`dates`, the ingress is found from the disk means of
 the 171 Å channel, and the 94 Å and 171 Å images of three windows are
 fetched: a few frames eight minutes before the ingress, every frame of the
-ingress, and a few frames in the umbra, which are the dark reference. The
-94 Å images are multiplied by the flat field they were divided by, which
-returns them to the units of the detector, and every image is averaged over
-square bins. Each day is written to a FITS file of its own.
+ingress, and three minutes of the umbra just after the whole disk has set,
+which are the dark reference. Every image is level 1 and is averaged over
+square bins, and the flat field the 94 Å images were divided by is averaged
+over the same bins and kept with them. Each day is written to a FITS file
+of its own.
 """
 
 import datetime
@@ -90,19 +91,23 @@ def build(
         Where to write the archive file.
     """
     start, gone = ingress(date)
+    # the dark is taken as soon as the visible disk has set everywhere, since
+    # the offset of each readout quadrant drifts by about a hundredth of a DN
+    # per second over minutes, a tenth of the leak in its first years
     windows = {
         "PRE": (start - np.timedelta64(8, "m"), 36),
         "INGRESS": (
             start - np.timedelta64(24, "s"),
             int((gone - start) / np.timedelta64(1, "s")) + 114,
         ),
-        "UMBRA": (gone + np.timedelta64(8, "m"), 36),
+        "UMBRA": (gone + np.timedelta64(120, "s"), 180),
     }
     day = cache / f"{date:%Y%m%d}"
     have = {p.name: p for p in day.rglob("aia*.fits")} if day.exists() else {}
 
     hdus = []
     header = None
+    flat_records = set()
     for channel in channels:
         for group, (begin, seconds) in windows.items():
             records = _jsoc.records(begin, seconds, channel)
@@ -117,7 +122,7 @@ def build(
                     h = hdul[1].header
                     image = hdul[1].data.astype(np.float32)
                 if channel == 94:
-                    image = image * _jsoc.flat(h["FLAT_REC"], flats)
+                    flat_records.add(h["FLAT_REC"])
                 if header is None:
                     header = h
                 n = 4096 // binning
@@ -158,6 +163,21 @@ def build(
                 )
             )
 
+    # one flat field serves every 94 frame of an ingress
+    if len(flat_records) != 1:
+        raise ValueError(f"the 94 frames of {date} have flat fields {flat_records}")
+    (flat_record,) = flat_records
+    n = 4096 // binning
+    flat = _jsoc.flat(flat_record, flats)
+    hdu = fits.CompImageHDU(
+        flat.reshape(n, binning, n, binning).mean(axis=(1, 3)),
+        name="FLAT94",
+        compression_type="GZIP_2",
+        quantize_level=0.0,
+    )
+    hdu.header["FLAT_REC"] = (flat_record, "the flat field of the 94 frames")
+    hdus.append(hdu)
+
     primary = fits.PrimaryHDU()
     p = primary.header
     p["DATE_ECL"] = (f"{date:%Y-%m-%d}", "the day of the eclipse")
@@ -180,7 +200,7 @@ def build(
         "DSUN_OBS",
     ):
         p[key] = (header[key], "of the first 94 frame before the eclipse")
-    p["UNITS94"] = ("DN", "94: level 1 times its flat field")
+    p["UNITS94"] = ("DN", "94: level 1")
     p["UNITS171"] = ("DN", "171: level 1")
     p["CREATOR"] = (
         f"aia-94-leak-paper {importlib.metadata.version('aia-94-leak-paper')}",

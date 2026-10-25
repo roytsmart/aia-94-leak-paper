@@ -20,6 +20,13 @@ before the edge, whatever EUV is left. The point spread function is a sharp
 core and a broad Gaussian wing which carries a fraction :math:`\\eta` of the
 light; it is fit once to the eclipses in which the leak is brightest and
 then held fixed.
+
+The leak reaches the same detector as the EUV, so the 94 Å frames are fit
+in level 1, flat fielded as the EUV is: in the units of the detector the
+leak carries the pattern of the flat field, the gains of the four readout
+amplifiers and the sensitivity of the detector across the disk. They are
+multiplied by the flat field at disk center, so that the leak there is in
+the units of the detector.
 """
 
 import dataclasses
@@ -135,7 +142,10 @@ class _Ingress:
     s: np.ndarray
     """The time of each frame after the EUV edge of each bin, in seconds."""
     data: np.ndarray
-    """94 Å, less the dark, scaled to the median exposure, in DN."""
+    """
+    94 Å in level 1 times the flat field at disk center, less the dark,
+    scaled to the median exposure, in DN.
+    """
     before: np.ndarray
     """94 Å before the EUV edge of each bin, less the dark, in DN."""
     r: np.ndarray
@@ -197,17 +207,22 @@ def _ingress(eclipse: "aia_94_leak_paper.eclipses.Eclipse") -> _Ingress:
     )
     plane = t0 + gx * x + gy * y
 
-    # 94 on that clock, less the dark and scaled to the median exposure
+    # 94 on that clock, less the dark and scaled to the median exposure, in
+    # level 1 times the flat field at disk center
     exposure = np.median(exposures["INGRESS94"].ndarray)
     t94 = _seconds(eclipse.times["INGRESS94"], eclipse.start)
     s = t94 - plane
-    dark = (images["UMBRA94"] * exposure / exposures["UMBRA94"]).mean("time")
-    data = images["INGRESS94"] * exposure / exposures["INGRESS94"] - dark
+
+    def scaled(key: str) -> na.ScalarArray:
+        return images[key] * eclipse.flat_center * exposure / exposures[key]
+
+    dark = scaled("UMBRA94").mean("time")
+    data = scaled("INGRESS94") - dark
 
     # each bin before its edge, from its own frames where there are any
     early = (s >= _window[0]) & (s < _window[1])
     count = np.sum(early, axis="time")
-    pre = (images["PRE94"] * exposure / exposures["PRE94"]).mean("time") - dark
+    pre = scaled("PRE94").mean("time") - dark
     before94 = np.where(
         count > 0,
         np.sum(np.where(early, data, 0 * u.DN), axis="time") / np.maximum(count, 1),
@@ -286,7 +301,10 @@ def psf() -> PSF:
 
 @dataclasses.dataclass(frozen=True)
 class Leak:
-    """The leak measured in one eclipse, in the units of the detector."""
+    """
+    The leak measured in one eclipse, in level 1 times the flat field at
+    disk center, which there are the units of the detector.
+    """
 
     date: datetime.date
     """The day of the eclipse."""
@@ -439,7 +457,9 @@ def history() -> list[Leak]:
 def seen(date: datetime.date) -> na.ScalarArray:
     """
     The leak of one eclipse with the whole disk up, through the point spread
-    function, per second, on the bins of the archive.
+    function, per second, on the bins of the archive, in the units of
+    :class:`Leak`; divided by
+    :attr:`aia_94_leak_paper.eclipses.Eclipse.flat_center`, it is in level 1.
 
     Parameters
     ----------

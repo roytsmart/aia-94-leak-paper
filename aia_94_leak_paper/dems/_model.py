@@ -9,9 +9,10 @@ to EVE, including the empirical correction of 94 Å for the lines CHIANTI
 lacks, and with the uncertainty of SolarSoft. It is inverted twice: from the
 images as they are, and with the leak measured in the eclipse of the same
 day subtracted from 94 Å. The leak is the limb-darkened disk of that eclipse
-seen through its point spread function, and divided by the flat field of
-94 Å, since light that adds to the detector is divided by the flat field
-with the rest of the image.
+seen through its point spread function. It reaches the detector as the EUV
+does, so in level 1, flat fielded with the rest of the image, it keeps the
+shape the eclipse measures; the eclipse measures it in the units of the
+detector at disk center, so it is divided by the flat field there.
 """
 
 import dataclasses
@@ -106,7 +107,9 @@ def leak(date: datetime.date) -> na.ScalarArray:
     disk = np.where(r < 1, 1 - fit.limb_darkening * (1 - mu), 0)
     axes = ("y", "x")
     image = eclipses.psf()(disk.ndarray_aligned(axes), synoptic.radius)
-    return na.ScalarArray(image, axes=axes) * fit.amplitude / synoptic.flat
+    inner = (r < 0.1).ndarray_aligned(axes)
+    flat_center = np.median(synoptic.flat.ndarray_aligned(axes)[inner])
+    return na.ScalarArray(image, axes=axes) * fit.amplitude / flat_center
 
 
 def response(time: astropy.time.Time) -> na.FunctionArray:

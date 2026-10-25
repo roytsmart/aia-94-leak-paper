@@ -76,7 +76,8 @@ def brightness(
 def leak(date: datetime.date) -> u.Quantity:
     """
     The leak of one eclipse in :data:`ring`, with the whole disk up, through
-    the point spread function, per second.
+    the point spread function, per second, as the detector records it, in
+    the units of the images.
 
     Parameters
     ----------
@@ -85,9 +86,10 @@ def leak(date: datetime.date) -> u.Quantity:
     """
     eclipses = aia_94_leak_paper.eclipses
     axes = ("y", "x")
-    seen = eclipses.seen(date)
+    eclipse = eclipses.load(date)
+    seen = eclipses.seen(date) * eclipse.flat / eclipse.flat_center
     unit = seen.unit
-    position = eclipses.load(date).position
+    position = eclipse.position
     r = np.sqrt(np.square(position.x) + np.square(position.y))
     return (
         _median(

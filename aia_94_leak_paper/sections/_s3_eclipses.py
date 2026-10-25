@@ -22,7 +22,12 @@ def eclipses() -> aastex.Section:
     Each bin of the disk on a clock started by its own 171\,\AA\ edge; a forward model of a
     limb-darkened disk setting behind the atmosphere, seen through a \PSF\ with a sharp core and
     broad wings, plus whatever \EUV\ is left, fit to the frames in which the \EUV\ is gone.
-    The frames in the umbra are the dark.
+    The leak reaches the same detector as the \EUV, so the 94\,\AA\ frames are flat fielded as the
+    \EUV\ is, and multiplied by the flat field at disk center to keep the units of the detector
+    there; in the units of the detector the leak carries the pattern of the flat field, with a step
+    at the edge of each quadrant from the gain of its amplifier.
+    The dark is the umbra just after the whole disk has set, rather than minutes later, since the
+    offset of each quadrant drifts.
 \item \textbf{Results.}
     The leak at disk center in \numEclipses\ eclipses from \yearFirst\ to \yearLast: from
     \leakFirst\ to \leakLast, with a doubling time of \doublingTime\ since \yearOnset\
