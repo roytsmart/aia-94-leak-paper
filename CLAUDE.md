@@ -80,8 +80,9 @@ ruff format                     # format (CI enforces --check)
 ruff check                      # lint (CI enforces)
 ```
 
-Building the PDF requires a **LaTeX installation** with `latexmk` (TeX Live:
-`texlive-publishers texlive-science cm-super latexmk`). Without `latexmk`,
+Building the PDF requires a **LaTeX installation** with `latexmk`: the TeX Live
+packages in `.github/texlive.txt`, which CI installs from CTAN and caches on a
+hash of that list (add a package there when the article starts to use one). Without `latexmk`,
 `pylatex` falls back to a single `pdflatex` pass and the bibliography is
 silently missing; `test_pdf` checks for this.
 

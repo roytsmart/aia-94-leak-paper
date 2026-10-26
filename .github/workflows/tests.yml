@@ -11,16 +11,49 @@ jobs:
     runs-on: ubuntu-latest
     name: Build and check the article
     steps:
-      - name: Install LaTeX
-        # `apt-get` waits forever if another process on the runner holds the
-        # dpkg lock, so bound that wait and answer its prompts non-interactively.
-        # The index the runner ships with goes stale, and installing against a
-        # stale one asks the mirror for versions it has since replaced.
-        run: >-
-          sudo apt-get update -o DPkg::Lock::Timeout=300 &&
-          sudo apt-get install -y -o DPkg::Lock::Timeout=300
-          texlive-publishers texlive-science cm-super latexmk dvipng
       - uses: actions/checkout@v7
+      # TeX Live is installed from CTAN with only the packages the article
+      # uses, listed in `.github/texlive.txt`, and the installation is cached
+      # on a hash of that list. A run that restores it downloads nothing, so it
+      # no longer waits on a slow mirror of Ubuntu, as `apt-get` did for over
+      # an hour at times. The cache is saved as soon as TeX Live is installed,
+      # so that a run whose tests fail still keeps it.
+      - name: Restore TeX Live
+        id: texlive
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/texlive
+          key: texlive-${{ runner.os }}-${{ hashFiles('.github/texlive.txt') }}
+      - name: Install TeX Live
+        if: steps.texlive.outputs.cache-hit != 'true'
+        # a stuck mirror fails the step rather than holding the runner
+        timeout-minutes: 20
+        run: |
+          curl -fsSL --retry 3 \
+            https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz \
+            | tar -xz -C "$RUNNER_TEMP"
+          cat > "$RUNNER_TEMP/texlive.profile" <<EOF
+          selected_scheme scheme-infraonly
+          TEXDIR $HOME/texlive
+          TEXMFLOCAL $HOME/texlive/texmf-local
+          TEXMFSYSCONFIG $HOME/texlive/texmf-config
+          TEXMFSYSVAR $HOME/texlive/texmf-var
+          TEXMFHOME ~/texmf
+          instopt_adjustpath 0
+          tlpdbopt_autobackup 0
+          tlpdbopt_install_docfiles 0
+          tlpdbopt_install_srcfiles 0
+          EOF
+          "$RUNNER_TEMP"/install-tl-*/install-tl --profile "$RUNNER_TEMP/texlive.profile"
+          "$HOME/texlive/bin/x86_64-linux/tlmgr" install $(sed 's/#.*//' .github/texlive.txt)
+      - name: Save TeX Live
+        if: steps.texlive.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/texlive
+          key: ${{ steps.texlive.outputs.cache-primary-key }}
+      - name: Put TeX Live on the path
+        run: echo "$HOME/texlive/bin/x86_64-linux" >> "$GITHUB_PATH"
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
