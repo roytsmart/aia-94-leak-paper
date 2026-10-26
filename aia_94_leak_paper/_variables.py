@@ -66,6 +66,7 @@ def variables() -> list[aastex.Variable]:
     rate = u.DN / u.s
     first, last = leaks[0], leaks[-1]
     fraction = (last.center / last.quiet).to_value(u.percent)
+    gradient = eclipses.residuals(last.date).gradient
     run = aia_94_leak_paper.noise.load(date_ingress)
     noise = aia_94_leak_paper.noise.fit(run)
     disk = aia_94_leak_paper.noise.disk(run)
@@ -127,6 +128,14 @@ def variables() -> list[aastex.Variable]:
         aastex.Variable(
             name="ingressSunset",
             value=_measured(eclipses.fit(date_ingress).sunset),
+        ),
+        # how much brighter than the fit the plateau is toward the right of the
+        # detector, per solar radius, in the last eclipse
+        aastex.Variable(
+            name="plateauGradient",
+            value=_percent(
+                (np.hypot(gradient.x, gradient.y) / last.center).to_value(u.one)
+            ),
         ),
         # the fraction of the signal at disk center that is leak, in the last eclipse
         aastex.Variable(
