@@ -63,15 +63,25 @@ def residuals() -> aastex.FigureStar:
     the time after the EUV edge of each bin.
     """
     eclipses = aia_94_leak_paper.eclipses
+    # a column for each eclipse, and a narrow one for the color bar and the
+    # legends, whose labels are too long for the empty corners of the panels
     fig, axs = plt.subplots(
         nrows=3,
-        ncols=len(dates_residuals),
+        ncols=len(dates_residuals) + 1,
         figsize=(aastex.text_width_inches, 5.2),
-        sharex="row",
-        sharey="row",
         constrained_layout=True,
-        gridspec_kw={"height_ratios": [1.3, 0.8, 0.8]},
+        gridspec_kw={
+            "height_ratios": [1.3, 0.8, 0.8],
+            "width_ratios": [1] * len(dates_residuals) + [0.6],
+        },
     )
+    for row in axs[:, :-1]:
+        for ax in row[1:]:
+            ax.sharex(row[0])
+            ax.sharey(row[0])
+            ax.tick_params(labelleft=False)
+    for ax in axs[:, -1]:
+        ax.set_axis_off()
     axes = ("time", "y", "x")
     seconds = np.arange(35, 201)
     styles = {
@@ -155,25 +165,33 @@ def residuals() -> aastex.FigureStar:
                 m.append(np.mean(model[k]))
                 e.append(_clipped_mean(residual[k]))
             color_data, color_model = styles[region]
-            middle.plot(t, d, ".", color=color_data, markersize=1.5, label=f"{region}")
-            middle.plot(t, m, color=color_model, linewidth=0.8, label="fit")
-            bottom.plot(t, e, color=color_model, linewidth=0.8)
+            middle.plot(
+                t, d, ".", color=color_data, markersize=1.5, label=f"frames, {region}"
+            )
+            middle.plot(t, m, color=color_model, linewidth=0.8, label=f"fit, {region}")
+            bottom.plot(t, e, color=color_model, linewidth=0.8, label=region)
         bottom.axhspan(-1, 1, color="0.92", linewidth=0, zorder=0)
         bottom.axhline(0, color="0.6", linewidth=0.5)
         for ax in (middle, bottom):
             ax.axvline(setting, color="0.4", linewidth=0.5, linestyle="dotted")
             ax.set_xlim(seconds[0], seconds[-1])
+            ax.set_xticks([50, 100, 150, 200])
             ax.tick_params(labelsize=7)
         middle.set_ylim(-5, 105)
         bottom.set_ylim(-8, 8)
 
     axs[1, 0].set_ylabel(r"\% of the leak" "\n" "at disk center", fontsize=8)
     axs[2, 0].set_ylabel(r"residual (\%)", fontsize=8)
-    axs[1, -1].legend(
-        fontsize=6, loc="center right", ncols=2, handlelength=1, columnspacing=0.8
-    )
+    for row in (1, 2):
+        axs[row, -1].legend(
+            *axs[row, -2].get_legend_handles_labels(),
+            fontsize=6,
+            loc="center left",
+            handlelength=1,
+            borderaxespad=0,
+        )
     fig.supxlabel("time after the EUV edge of each bin (s)", fontsize=8)
-    bar = fig.colorbar(im, ax=axs[0, :], shrink=0.85, pad=0.01)
+    bar = fig.colorbar(im, cax=axs[0, -1].inset_axes([0, 0.075, 0.12, 0.85]))
     bar.set_label(r"residual (\%)", fontsize=8)
     bar.ax.tick_params(labelsize=7)
 
@@ -190,9 +208,10 @@ Top: the mean residual of each bin over its plateau, from when its \EUV\ is gone
 ${smoothing} \times {smoothing}$ bins; gray where no frame is fit, dashed at the edges of the
 quadrants of the detector, and the arrow the direction the \EUV\ edge sweeps the disk.
 Middle: the frames (points) and the fit (lines) against the time after the \EUV\ edge of each
-bin, the mean of the bins on the disk (within {disk:g}\,$R_\odot$) and off the limb ({inner:g} to
-{outer:g}\,$R_\odot$) in each second.
-Bottom: their difference; the gray band is $\pm 1\%$.
+bin, the mean in each second of the bins on the disk (within {disk:g}\,$R_\odot$; black and red)
+and off the limb ({inner:g} to {outer:g}\,$R_\odot$; gray and orange).
+Bottom: their difference, on the disk (red) and off the limb (orange); the gray band is
+$\pm 1\%$.
 The dotted line is when the visible disk is half set.""")
     )
     return result
