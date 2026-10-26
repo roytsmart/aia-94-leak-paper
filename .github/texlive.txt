@@ -1,0 +1,34 @@
+# The TeX Live packages the article is built with. The `tests` workflow
+# installs them from CTAN and caches the installation on a hash of this file,
+# so a change here is a new installation.
+#
+# Beyond the basic scheme, these hold the files a build of the article reads,
+# as `latexmk -recorder` lists them in aia-94-leak.fls, and those that
+# matplotlib's usetex reads. When the article starts to use another package,
+# add the TeX Live package that holds it (`tlmgr search --global --file`).
+scheme-basic
+latexmk
+
+# the article
+acronym
+bigfoot # suffix.sty
+epsf
+fontname
+helvetic
+lastpage
+lineno
+siunitx
+textcase
+translations
+ulem
+xcolor
+xstring
+
+# the Type 1 versions of the EC fonts, for the article and for matplotlib
+cm-super
+
+# matplotlib's usetex preamble, and the program that renders its text in
+# raster images
+type1cm
+underscore
+dvipng
