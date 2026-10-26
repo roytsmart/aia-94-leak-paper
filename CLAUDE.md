@@ -27,7 +27,7 @@ The leak is measured four independent ways, and each gets its own section:
   attenuates it only as much as the EUV, so it passes that filter through
   openings rather than the metal; the images AIA takes without a focal-plane
   filter (`304_OPEN`, monitoring the visible light through the entrance
-  filters) grow with it, at a constant ratio since 2020; the 304 Å channel
+  filters) grow with it, at a constant ratio since 2019; the 304 Å channel
   (same telescope and CCD, aluminum focal-plane filter) has none.
 - **Consequences and a correction.** DEMs (hot quiet Sun and coronal holes),
   Fe XVIII maps, the degradation calibration, and published results that show

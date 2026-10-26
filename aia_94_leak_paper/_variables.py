@@ -23,17 +23,32 @@ def _pending(name: str) -> aastex.Variable:
     return aastex.Variable(name=name, value=aastex.NoEscape(r"\textbf{XX}"))
 
 
-def _significant(value: u.Quantity, digits: int = 2) -> u.Quantity:
-    """A quantity rounded to some significant figures, which is all a measurement here supports."""
-    if value.value == 0:
-        return value
-    decimals = digits - 1 - int(np.floor(np.log10(abs(value.value))))
-    return np.round(value, decimals)
+def _figures(value: float, digits: int = 2) -> str:
+    """
+    A number written to some significant figures, which is all a measurement
+    here supports.
+
+    The zeros among the figures are written too: a number rounded and then
+    printed as a float loses them, and 0.90 written as 0.9 claims one figure
+    rather than two.
+    """
+    mantissa, exponent = f"{value:.{digits - 1}e}".split("e")
+    decimals = max(digits - 1 - int(exponent), 0)
+    return f"{float(f'{mantissa}e{exponent}'):.{decimals}f}"
+
+
+def _measured(value: u.Quantity, digits: int = 2) -> aastex.NoEscape:
+    """A quantity written to some significant figures, with its unit."""
+    text = value.to_string(
+        format="latex_inline",
+        formatter=lambda v: _figures(v, digits),
+    )
+    return aastex.NoEscape(rf"\ensuremath{{{text[1:~0]}}}")
 
 
 def _percent(fraction: float) -> aastex.NoEscape:
     """A fraction written as a percentage, to two significant figures."""
-    return aastex.NoEscape(rf"{_significant(fraction * 100 * u.one).value:g}\%")
+    return aastex.NoEscape(rf"{_figures(fraction * 100)}\%")
 
 
 def variables() -> list[aastex.Variable]:
@@ -48,7 +63,7 @@ def variables() -> list[aastex.Variable]:
     dates = eclipses.dates
     leaks = eclipses.history()
     growth = eclipses.growth(leaks)
-    rate = (u.DN, u.s**-1)
+    rate = u.DN / u.s
     first, last = leaks[0], leaks[-1]
     fraction = (last.center / last.quiet).to_value(u.percent)
     run = aia_94_leak_paper.noise.load(date_ingress)
@@ -85,16 +100,16 @@ def variables() -> list[aastex.Variable]:
         aastex.Variable(name="yearFirst", value=min(dates).year),
         aastex.Variable(name="yearLast", value=max(dates).year),
         # the leak at disk center in the first and the last eclipse
-        aastex.Variable(name="leakFirst", value=_significant(first.center), unit=rate),
-        aastex.Variable(name="leakLast", value=_significant(last.center), unit=rate),
+        aastex.Variable(name="leakFirst", value=_measured(first.center.to(rate))),
+        aastex.Variable(name="leakLast", value=_measured(last.center.to(rate))),
         # the year the leak began to grow exponentially, and how fast
         aastex.Variable(name="yearOnset", value=growth.since),
-        aastex.Variable(name="doublingTime", value=_significant(growth.doubling)),
+        aastex.Variable(name="doublingTime", value=_measured(growth.doubling)),
         # how long after the EUV edge the visible disk is half set, the median over the
         # eclipses since the onset (before it the setting is held at this median)
         aastex.Variable(
             name="sunsetDelay",
-            value=_significant(
+            value=_measured(
                 np.median(
                     u.Quantity(
                         [k.sunset for k in leaks if k.date.year >= eclipses.onset]
@@ -111,56 +126,54 @@ def variables() -> list[aastex.Variable]:
         ),
         aastex.Variable(
             name="ingressSunset",
-            value=_significant(eclipses.fit(date_ingress).sunset),
+            value=_measured(eclipses.fit(date_ingress).sunset),
         ),
         # the fraction of the signal at disk center that is leak, in the last eclipse
         aastex.Variable(
             name="leakFractionQuietSun",
-            value=aastex.NoEscape(rf"{_significant(fraction * u.one).value:g}\%"),
+            value=aastex.NoEscape(rf"{_figures(fraction)}\%"),
         ),
         # the noise of the run on the day of the ingress shown
         aastex.Variable(name="noiseFrames", value=aia_94_leak_paper.noise.frames),
-        aastex.Variable(name="readNoise", value=_significant(np.nanmean(noise.read))),
+        aastex.Variable(name="readNoise", value=_measured(np.nanmean(noise.read))),
         aastex.Variable(
-            name="noiseSlope", value=_significant(np.nanmean(noise.slope) * u.DN)
+            name="noiseSlope", value=_measured(np.nanmean(noise.slope) * u.DN)
         ),
-        aastex.Variable(name="noiselessCenter", value=_significant(noise.noiseless)),
+        aastex.Variable(name="noiselessCenter", value=_measured(noise.noiseless)),
         aastex.Variable(
-            name="noiselessSpread", value=_significant(noise.spread, digits=1)
+            name="noiselessSpread", value=_measured(noise.spread, digits=1)
         ),
         # the map of the noiseless signal on that day: its limb darkening, how
         # much it grows per DN of the 94 Å signal of a region, and the part of
         # that signal it is at disk center
         aastex.Variable(
             name="noiseLimbDarkening",
-            value=aastex.NoEscape(
-                rf"\ensuremath{{{_significant(disk.limb_darkening * u.one).value:g}}}"
-            ),
+            value=aastex.NoEscape(rf"\ensuremath{{{_figures(disk.limb_darkening)}}}"),
         ),
         aastex.Variable(
             name="noisePerSignal",
             value=aastex.NoEscape(
-                rf"\ensuremath{{{_significant(disk.per_signal * u.one, digits=1).value:g}}}"
+                rf"\ensuremath{{{_figures(disk.per_signal, digits=1)}}}"
             ),
         ),
         aastex.Variable(
             name="noiseShare",
             value=aastex.NoEscape(
-                rf"{_significant((disk.amplitude / disk.signal).to(u.percent)).value:g}\%"
+                rf"{_figures((disk.amplitude / disk.signal).to_value(u.percent))}\%"
             ),
         ),
         # the typical spread of the noise method among the quadrants, and how
         # its noiseless signal compares with the eclipses once the leak is
         # three times that
-        aastex.Variable(name="noiseSpread", value=_significant(spread, digits=1)),
+        aastex.Variable(name="noiseSpread", value=_measured(spread, digits=1)),
         aastex.Variable(name="yearNoise", value=min(k.date.year for _, k in measured)),
         aastex.Variable(
             name="noiseRatioMin",
-            value=aastex.NoEscape(rf"{_significant(min(ratios) * u.one).value:g}\%"),
+            value=aastex.NoEscape(rf"{_figures(min(ratios))}\%"),
         ),
         aastex.Variable(
             name="noiseRatioMax",
-            value=aastex.NoEscape(rf"{_significant(max(ratios) * u.one).value:g}\%"),
+            value=aastex.NoEscape(rf"{_figures(max(ratios))}\%"),
         ),
         # the day the channel observed through its thick focal-plane filter,
         # how far apart the runs through each filter began, how much more
@@ -171,7 +184,7 @@ def variables() -> list[aastex.Variable]:
                 f"{filters.switch:%Y} {filters.switch:%B} {filters.switch.day}"
             ),
         ),
-        aastex.Variable(name="filterGap", value=_significant(gap.to(u.min))),
+        aastex.Variable(name="filterGap", value=_measured(gap.to(u.min))),
         aastex.Variable(
             name="filterZirconium",
             value=filters.zirconium["thick"] - filters.zirconium["thin"],
@@ -186,32 +199,26 @@ def variables() -> list[aastex.Variable]:
         # quadrants, and from the signals alone)
         aastex.Variable(
             name="filterEUV",
-            value=aastex.NoEscape(
-                rf"\ensuremath{{{_significant(attenuation.euv * u.one).value:g}}}"
-            ),
+            value=aastex.NoEscape(rf"\ensuremath{{{_figures(attenuation.euv)}}}"),
         ),
         aastex.Variable(
             name="filterTable",
-            value=aastex.NoEscape(
-                rf"\ensuremath{{{_significant(filters.euv_table * u.one).value:g}}}"
-            ),
+            value=aastex.NoEscape(rf"\ensuremath{{{_figures(filters.euv_table)}}}"),
         ),
         aastex.Variable(
             name="filterLeak",
-            value=aastex.NoEscape(
-                rf"\ensuremath{{{_significant(attenuation.leak * u.one).value:g}}}"
-            ),
+            value=aastex.NoEscape(rf"\ensuremath{{{_figures(attenuation.leak)}}}"),
         ),
         aastex.Variable(
             name="filterLeakSpread",
             value=aastex.NoEscape(
-                rf"\ensuremath{{{_significant(attenuation.leak_spread * u.one, digits=1).value:g}}}"
+                rf"\ensuremath{{{_figures(attenuation.leak_spread, digits=1)}}}"
             ),
         ),
         aastex.Variable(
             name="filterLeakSignals",
             value=aastex.NoEscape(
-                rf"\ensuremath{{{_significant(attenuation.leak_signals * u.one).value:g}}}"
+                rf"\ensuremath{{{_figures(attenuation.leak_signals)}}}"
             ),
         ),
         # the images without a focal-plane filter: the month of the first, the
@@ -229,7 +236,7 @@ def variables() -> list[aastex.Variable]:
         ),
         aastex.Variable(
             name="entranceGrowth",
-            value=aastex.NoEscape(f"{_significant(bright[-1] / bright[0]).value:g}"),
+            value=aastex.NoEscape(_figures((bright[-1] / bright[0]).to_value(u.one))),
         ),
         # the leak against them: since when it dominates the glow before the
         # onset, its mean ratio to them since then and the scatter of that,
@@ -242,7 +249,7 @@ def variables() -> list[aastex.Variable]:
         aastex.Variable(
             name="entranceRatio",
             value=aastex.NoEscape(
-                rf"\ensuremath{{{_significant(comparison.ratio_mean * 1e7 * u.one).value:g}"
+                rf"\ensuremath{{{_figures(comparison.ratio_mean * 1e7)}"
                 r" \times 10^{-7}}"
             ),
         ),
@@ -250,13 +257,17 @@ def variables() -> list[aastex.Variable]:
         aastex.Variable(
             name="entranceGrowthSince",
             value=aastex.NoEscape(
-                f"{_significant(comparison.leak[-1] / comparison.leak[first_dominant]).value:g}"
+                _figures(
+                    (comparison.leak[-1] / comparison.leak[first_dominant]).to_value(
+                        u.one
+                    )
+                )
             ),
         ),
         aastex.Variable(
             name="entranceRatioFirst",
             value=aastex.NoEscape(
-                f"{_significant(comparison.ratio[0] / comparison.ratio_mean * u.one).value:g}"
+                _figures(comparison.ratio[0] / comparison.ratio_mean)
             ),
         ),
         aastex.Variable(name="entranceRatioFirstYear", value=comparison.dates[0].year),
@@ -269,7 +280,7 @@ def variables() -> list[aastex.Variable]:
         ),
         aastex.Variable(
             name="hotTemperature",
-            value=_significant((10**dems.hot * u.K).to(u.MK)),
+            value=_measured((10**dems.hot * u.K).to(u.MK)),
         ),
         aastex.Variable(name="hotQuietObserved", value=_percent(shown.quiet_observed)),
         aastex.Variable(
@@ -307,7 +318,7 @@ def variables() -> list[aastex.Variable]:
         ),
         aastex.Variable(name="holesFewest", value=dems.fewest),
         # the side of the bins the DEMs are inverted in
-        aastex.Variable(name="demBin", value=_significant(dems.load(date_dem).scale)),
+        aastex.Variable(name="demBin", value=_measured(dems.load(date_dem).scale)),
         # how bright the quiet Sun is in 94 Å with the leak subtracted, against
         # what its DEM predicts, in the first and the last eclipse
         aastex.Variable(name="ratioFirst", value=_percent(summaries[0].ratio_94)),

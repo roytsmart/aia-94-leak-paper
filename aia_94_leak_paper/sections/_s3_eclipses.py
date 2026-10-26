@@ -38,7 +38,8 @@ def eclipses() -> aastex.Section:
     (Figure~\ref{fig:leakHistory}).
     Since \yearNoise, when the leak first exceeded three times the spread of the noise method among
     the quadrants (\noiseSpread), the noiseless signal is \noiseRatioMin\ to \noiseRatioMax\ of the
-    leak, the fraction falling as the leak grows; before, the two differ by up to a factor of two.
+    leak, the fraction falling as the leak grows; before, the leak is too faint for the noise to
+    measure.
     Part of the shortfall is expected: a visible photon frees one electron, so the leak does carry
     a little photon noise, a twentieth of what an \EUV\ signal of the same size would.
     \roy{Account for the rest: the rise of the variance per DN with signal, the step in the
