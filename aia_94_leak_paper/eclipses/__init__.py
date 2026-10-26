@@ -17,13 +17,16 @@ from ._model import (
     psf,
     seen,
 )
+from ._residuals import Residuals, before_setting, residuals
 
 __all__ = [
     "PSF",
     "Eclipse",
     "Growth",
     "Leak",
+    "Residuals",
     "archive",
+    "before_setting",
     "binning",
     "build",
     "channels",
@@ -37,6 +40,7 @@ __all__ = [
     "load",
     "onset",
     "psf",
+    "residuals",
     "seen",
     "sha256",
     "url",

@@ -28,6 +28,20 @@ def eclipses() -> aastex.Section:
     at the edge of each quadrant from the gain of its amplifier.
     The dark is the median of the umbra just after the whole disk has set, rather than minutes
     later, since the offset of each quadrant drifts.
+\item \textbf{Residuals.}
+    On the plateau, the frames are brighter than the fit toward the right of the detector in every
+    eclipse since \yearOnset, whichever way the edge sweeps the disk, by \plateauGradient\ of the
+    leak at disk center per solar radius in the latest (Figure~\ref{fig:residuals}); the earliest
+    also show the offsets of the quadrants.
+    Just after the \EUV\ is gone the frames are brighter than the fit, most near solar maximum, as if
+    some \EUV\ of 94\,\AA\ were still setting; each bin samples it once a frame, at its own phase,
+    which stripes the map across the sweep.
+    Around the setting, the frames fall below the fit just before it and rise above it just after:
+    the disk sets more softly than the error function of the model.
+    Off the limb they rise briefly as the disk sets there, with the light of the photosphere
+    refracted along the limb of the Earth, which the model leaves out.
+    \roy{Find where the gradient comes from: the flat field, which is made for the \EUV, or the
+    path of the leak through the instrument.}
 \item \textbf{Results.}
     The leak at disk center in \numEclipses\ eclipses from \yearFirst\ to \yearLast: from
     \leakFirst\ to \leakLast, with a doubling time of \doublingTime\ since \yearOnset\
@@ -54,5 +68,6 @@ def eclipses() -> aastex.Section:
     Still to come: the radial profile of the leak, and the sharpness of its limb.
 \end{outline}""")
     result.append(aia_94_leak_paper.figures.ingress())
+    result.append(aia_94_leak_paper.figures.residuals())
     result.append(aia_94_leak_paper.figures.leak_history())
     return result

@@ -9,14 +9,17 @@ from ._filters import filters
 from ._ingress import date_ingress, ingress, times_ingress
 from ._leak_history import leak_history
 from ._noise import noise
+from ._residuals import dates_residuals, residuals
 
 __all__ = [
     "date_ingress",
+    "dates_residuals",
     "dems",
     "entrance",
     "filters",
     "ingress",
     "leak_history",
     "noise",
+    "residuals",
     "times_ingress",
 ]
