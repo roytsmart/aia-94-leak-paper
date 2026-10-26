@@ -11,7 +11,8 @@ def correction() -> aastex.Section:
 \begin{outline}
 \item \textbf{Model.}
     A limb-darkened disk seen through the \PSF\ of the leak, scaled by an amplitude interpolated
-    between eclipses, in the units of the detector and divided by the flat field.
+    between eclipses and divided by the flat field at disk center: flat fielded, the leak keeps the
+    shape the eclipses measure.
 \item \textbf{Uncertainty.}
     From the scatter about the exponential and between the methods.
 \item \textbf{Keeping it current.}

@@ -30,7 +30,7 @@ __all__ = [
     "version",
 ]
 
-version: str = "eclipses-v1"
+version: str = "eclipses-v2"
 """The release of this repository the archive is an asset of."""
 
 url: str = (
@@ -39,7 +39,7 @@ url: str = (
 )
 """Where the archive is published."""
 
-sha256: str = "f1f341c7b2c19d45ca47f53c3ab2bef1a4181a9b2879c0e3c05320592a9f3771"
+sha256: str = "4ea15ac78cdce128f31b9164c687e06045eed3a13ce5335fbae4bb37d6abf1ed"
 """The SHA-256 digest of the archive, checked after every download."""
 
 directory_default = pathlib.Path(
@@ -94,9 +94,8 @@ class Eclipse:
     """
     The ingress of one eclipse, averaged over square bins.
 
-    Every image has the axes ``time``, ``y``, and ``x``. The 94 Å images are
-    in the units of the detector (level 1 times its flat field) and the
-    171 Å images are level 1; neither is divided by the exposure time.
+    Every image has the axes ``time``, ``y``, and ``x``, is level 1, and is
+    not divided by the exposure time.
     """
 
     date: datetime.date
@@ -113,6 +112,12 @@ class Eclipse:
 
     exposures: dict[str, na.ScalarArray]
     """The exposure time of each image, keyed as :attr:`images`."""
+
+    flat: na.ScalarArray
+    """
+    The flat field the 94 Å images were divided by, averaged over the same
+    bins, with the axes ``y`` and ``x``.
+    """
 
     start: astropy.time.Time
     """When the 171 Å disk mean began to fall."""
@@ -138,6 +143,19 @@ class Eclipse:
             y=na.arange(0, n, axis="y"),
         )
         return (index - self.center) / self.radius
+
+    @property
+    def flat_center(self) -> float:
+        """
+        The flat field at disk center, the median of :attr:`flat` within a
+        tenth of a radius, by which level 1 there is in the units of the
+        detector.
+        """
+        position = self.position
+        r = np.sqrt(np.square(position.x) + np.square(position.y))
+        axes = ("y", "x")
+        inner = (r < 0.1).ndarray_aligned(axes)
+        return float(np.median(self.flat.ndarray_aligned(axes)[inner]))
 
 
 def load(date: datetime.date, directory: None | pathlib.Path = None) -> Eclipse:
@@ -166,6 +184,8 @@ def load(date: datetime.date, directory: None | pathlib.Path = None) -> Eclipse:
                 exposures[key] = na.ScalarArray(
                     np.array(hdu.data["EXPTIME"], dtype=float) * u.s, axes="time"
                 )
+            elif hdu.name == "FLAT94":
+                flat = na.ScalarArray(np.array(hdu.data, dtype=float), axes=("y", "x"))
             else:
                 images[hdu.name] = na.ScalarArray(
                     np.array(hdu.data, dtype=float) * u.DN, axes=("time", "y", "x")
@@ -175,6 +195,7 @@ def load(date: datetime.date, directory: None | pathlib.Path = None) -> Eclipse:
         images=images,
         times=times,
         exposures=exposures,
+        flat=flat,
         start=astropy.time.Time(p["T_START"], scale="utc"),
         gone=astropy.time.Time(p["T_GONE"], scale="utc"),
         binning=binning,

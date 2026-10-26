@@ -22,7 +22,12 @@ def eclipses() -> aastex.Section:
     Each bin of the disk on a clock started by its own 171\,\AA\ edge; a forward model of a
     limb-darkened disk setting behind the atmosphere, seen through a \PSF\ with a sharp core and
     broad wings, plus whatever \EUV\ is left, fit to the frames in which the \EUV\ is gone.
-    The frames in the umbra are the dark.
+    The leak reaches the same detector as the \EUV, so the 94\,\AA\ frames are flat fielded as the
+    \EUV\ is, and multiplied by the flat field at disk center to keep the units of the detector
+    there; in the units of the detector the leak carries the pattern of the flat field, with a step
+    at the edge of each quadrant from the gain of its amplifier.
+    The dark is the median of the umbra just after the whole disk has set, rather than minutes
+    later, since the offset of each quadrant drifts.
 \item \textbf{Results.}
     The leak at disk center in \numEclipses\ eclipses from \yearFirst\ to \yearLast: from
     \leakFirst\ to \leakLast, with a doubling time of \doublingTime\ since \yearOnset\
@@ -33,7 +38,8 @@ def eclipses() -> aastex.Section:
     (Figure~\ref{fig:leakHistory}).
     Since \yearNoise, when the leak first exceeded three times the spread of the noise method among
     the quadrants (\noiseSpread), the noiseless signal is \noiseRatioMin\ to \noiseRatioMax\ of the
-    leak, the fraction falling as the leak grows; before, the two differ by up to a factor of two.
+    leak, the fraction falling as the leak grows; before, the leak is too faint for the noise to
+    measure.
     Part of the shortfall is expected: a visible photon frees one electron, so the leak does carry
     a little photon noise, a twentieth of what an \EUV\ signal of the same size would.
     \roy{Account for the rest: the rise of the variance per DN with signal, the step in the

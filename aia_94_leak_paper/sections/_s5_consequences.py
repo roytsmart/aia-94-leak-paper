@@ -30,8 +30,9 @@ def consequences() -> aastex.Section:
     In full-disk comparisons a growing leak reads as rising sensitivity.
     The correction tables now hold the sensitivity of the channel constant.
     With the leak subtracted, 94\,\AA\ in the quiet Sun is \ratioFirst\ of what its \DEM\ predicts in
-    \yearFirst\ and \ratioLast\ in \yearLast, falling steadily between: the sensitivity of the
-    channel to the \EUV\ may have fallen while the leak hid it from full-disk comparisons.
+    \yearFirst\ and \ratioLast\ in \yearLast, falling between them though not steadily: the
+    sensitivity of the channel to the \EUV\ may have fallen while the leak hid it from full-disk
+    comparisons.
     \roy{Check against the degradation of the other channels and against SUVI.}
 \item \textbf{Published results.}
     Which of the results of Section~\ref{sec:Introduction} the leak accounts for, and how much.

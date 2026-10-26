@@ -27,7 +27,7 @@ The leak is measured four independent ways, and each gets its own section:
   attenuates it only as much as the EUV, so it passes that filter through
   openings rather than the metal; the images AIA takes without a focal-plane
   filter (`304_OPEN`, monitoring the visible light through the entrance
-  filters) grow with it, at a constant ratio since 2020; the 304 Å channel
+  filters) grow with it, at a constant ratio since 2019; the 304 Å channel
   (same telescope and CCD, aluminum focal-plane filter) has none.
 - **Consequences and a correction.** DEMs (hot quiet Sun and coronal holes),
   Fe XVIII maps, the degradation calibration, and published results that show
@@ -55,7 +55,9 @@ Roy T. Smart is the corresponding author, then Charles C. Kankelborg.
   keep the number of parallel requests to JSOC small (it answers 12 at once
   with HTTP 503), and keep `aia.lev1` queries to short windows: month-long
   ones with a `WAVE_STR` condition time out or are killed.
-- **The archives.** Each of `eclipses` (the ingresses, binned 16 x 16),
+- **The archives.** Each of `eclipses` (the ingresses in level 1, binned
+  16 x 16, with the 94 Å flat field; the leak is fit flat fielded, since it
+  reaches the detector as the EUV does),
   `noise` (the noon runs, reduced to statistics per region), `filters` (a run
   through each focal-plane filter on 2026-03-07, reduced the same way),
   `entrance` (one image a month without a focal-plane filter, binned
