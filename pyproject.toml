@@ -22,6 +22,7 @@ dependencies = [
     "scipy",
     "joblib",
     "named-arrays~=2.16",
+    "optika~=3.6",
     "solar-dynamics-observatory~=1.3",
     "utu~=0.5",
 ]
