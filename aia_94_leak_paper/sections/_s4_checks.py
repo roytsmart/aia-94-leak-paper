@@ -26,10 +26,17 @@ def checks() -> aastex.Section:
     of it from the signals alone (Figure~\ref{fig:filters}, right): it attenuates the leak about as
     much as the \EUV.
     So the leak reaches the detector through the focal-plane filter.
-    Visible light passing through the metal of the filter would be attenuated by orders of
-    magnitude more by the extra zirconium, so the leak passes the filter through openings in it or
-    around it rather than through the metal.
-    \roy{Cite the optical constants of zirconium in the visible.}
+    Light that crossed the metal of the filter would be attenuated by the extra zirconium by
+    $e^{-4\pi k\,\Delta d/\lambda}$, where $k$ is the extinction coefficient of zirconium at the
+    wavelength $\lambda$ and $\Delta d$ is the extra thickness.
+    For the \EUV\ this is \filterMetalEUV\ with the optical constants of \citet{Henke1993}, as the
+    calibration expects.
+    From \filterVisibleShort\ to \filterVisibleLong, beyond which the silicon of the detector is
+    transparent, it is at most \filterMetalQuerry\ with the optical constants of
+    \citet{Querry1987}, \filterMetalLynch\ with those of \citet{Lynch1975}, and \filterMetalPalm\
+    with those of the film of \citet{Palm2018}, the least absorbing of them.
+    Even that is \filterMetalShortfall\ times less than the spare passes of the leak, so the leak
+    passes the filter through openings in it or around it rather than through the metal.
 \item \textbf{The entrance filters.}
     The zirconium entrance filters of the channel pass enough visible light to image the
     photosphere, and \AIA\ monitors them with images taken without a focal-plane

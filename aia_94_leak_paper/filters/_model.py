@@ -25,12 +25,21 @@ thin filter, takes up whatever the thick filter does to the leak beyond
 what it does to the EUV. The structure of the corona fixes :math:`\\tau`,
 the attenuation of the EUV, and :math:`c` gives the attenuation of the leak
 from the signals alone, :math:`\\tau + c / p_\\mathrm{thin}`.
+
+Light that crossed the metal of the filters would be attenuated by the
+extra zirconium of the thick one, :func:`metal`, which the optical
+constants of zirconium give at any wavelength. In the EUV this is what the
+calibration expects, and in the visible it is far less than the thick
+filter passes of the leak, by every measurement of the constants,
+:data:`tables`.
 """
 
 import dataclasses
 
 import astropy.units as u
+import named_arrays as na
 import numpy as np
+import optika
 
 import aia_94_leak_paper
 
@@ -39,6 +48,11 @@ __all__ = [
     "attenuation",
     "band",
     "euv_table",
+    "metal",
+    "metal_visible",
+    "tables",
+    "visible",
+    "wavelength_euv",
     "within",
     "zirconium",
 ]
@@ -66,6 +80,24 @@ channel expects: the ratio of its effective areas through the thick and
 thin focal-plane filters, ``94_THICK`` and ``94_THIN`` in version 10 of the
 correction table at JSOC. Every version of the table has the same ratio,
 set by the transmissions of the two filters measured before launch.
+"""
+
+wavelength_euv: u.Quantity = 94 * u.AA
+"""The wavelength of the channel, which its effective areas are given at."""
+
+visible: tuple[u.Quantity, u.Quantity] = (4000 * u.AA, 11000 * u.AA)
+"""
+The wavelengths of visible light the leak could be made of: from the
+violet end of the visible to 1.1 µm, the wavelength of the band gap of
+silicon, beyond which the detector is transparent.
+"""
+
+tables: tuple[str, ...] = ("querry", "lynch", "palm")
+"""
+The measurements of the optical constants of zirconium in the visible, as
+the names of their tables in optika (:attr:`optika.chemicals.Chemical.table`):
+Querry (1987), optika's default; Lynch, Olson & Weaver (1975); and the film
+of Palm et al. (2018), the least absorbing of them.
 """
 
 
@@ -152,3 +184,51 @@ def attenuation() -> Attenuation:
         noiseless_thin=p_thin * u.DN,
         noiseless_thick=p_thick * u.DN,
     )
+
+
+def metal(
+    wavelength: u.Quantity | na.AbstractScalar,
+    table: None | str = None,
+) -> na.AbstractScalar:
+    """
+    How much the thick focal-plane filter would pass, relative to the thin
+    one, of light that crossed the metal: what its extra zirconium transmits,
+
+    .. math::
+
+        e^{-4 \\pi k \\, \\Delta d / \\lambda},
+
+    where :math:`k` is the extinction coefficient of zirconium at the
+    wavelength :math:`\\lambda` and :math:`\\Delta d` is how much more
+    zirconium the thick filter has. The reflections at the surfaces of the
+    two filters, and the oxide on them, are the same, and so are left out
+    of the ratio.
+
+    Parameters
+    ----------
+    wavelength
+        The wavelength of the light in vacuum.
+    table
+        The table of the optical constants of zirconium in optika, one of
+        :data:`tables`, or :obj:`None` for optika's default.
+    """
+    chemical = optika.chemicals.Chemical("Zr", table=table)
+    extra = zirconium["thick"] - zirconium["thin"]
+    depth = chemical.absorption(na.as_named_array(wavelength)) * extra
+    return np.exp(-depth.to(u.one).value)
+
+
+def metal_visible(table: None | str = None) -> float:
+    """
+    The most that the thick focal-plane filter would pass, relative to the
+    thin one, of light in :data:`visible` that crossed the metal,
+    :func:`metal`.
+
+    Parameters
+    ----------
+    table
+        The table of the optical constants of zirconium in optika, one of
+        :data:`tables`, or :obj:`None` for optika's default.
+    """
+    wavelength = na.geomspace(*visible, axis="wavelength", num=1001)
+    return float(metal(wavelength, table).max().ndarray)

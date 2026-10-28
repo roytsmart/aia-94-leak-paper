@@ -85,6 +85,7 @@ def variables() -> list[aastex.Variable]:
     filters = aia_94_leak_paper.filters
     attenuation = filters.attenuation()
     gap = filters.load("thin").time - filters.load("thick").time
+    metal = {table: filters.metal_visible(table) for table in filters.tables}
     entrance = aia_94_leak_paper.entrance
     monitor = entrance.load()
     bright = entrance.brightness(monitor)
@@ -228,6 +229,40 @@ def variables() -> list[aastex.Variable]:
             name="filterLeakSignals",
             value=aastex.NoEscape(
                 rf"\ensuremath{{{_figures(attenuation.leak_signals)}}}"
+            ),
+        ),
+        # how much the thick filter would pass, relative to the thin one, of
+        # light that crossed the metal: of the EUV, and at most of visible
+        # light by each measurement of the optical constants of zirconium,
+        # and how many times less than it passes of the leak that most is
+        aastex.Variable(
+            name="filterMetalEUV",
+            value=aastex.NoEscape(
+                rf"\ensuremath{{{_figures(float(filters.metal(filters.wavelength_euv).ndarray))}}}"
+            ),
+        ),
+        aastex.Variable(
+            name="filterVisibleShort", value=_measured(filters.visible[0].to(u.um))
+        ),
+        aastex.Variable(
+            name="filterVisibleLong", value=_measured(filters.visible[1].to(u.um))
+        ),
+        aastex.Variable(
+            name="filterMetalQuerry",
+            value=aastex.NoEscape(rf"\ensuremath{{{_figures(metal['querry'])}}}"),
+        ),
+        aastex.Variable(
+            name="filterMetalLynch",
+            value=aastex.NoEscape(rf"\ensuremath{{{_figures(metal['lynch'])}}}"),
+        ),
+        aastex.Variable(
+            name="filterMetalPalm",
+            value=aastex.NoEscape(rf"\ensuremath{{{_figures(metal['palm'])}}}"),
+        ),
+        aastex.Variable(
+            name="filterMetalShortfall",
+            value=aastex.NoEscape(
+                _figures(attenuation.leak / max(metal.values()), digits=1)
             ),
         ),
         # the images without a focal-plane filter: the month of the first, the
