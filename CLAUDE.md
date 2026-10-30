@@ -24,8 +24,10 @@ The leak is measured four independent ways, and each gets its own section:
   the visible disk sets, so the leak is seen alone. One ingress per season
   gives its history since 2010.
 - **Independent checks.** The thick focal-plane filter (1000 Å more Zr)
-  attenuates it only as much as the EUV, so it passes that filter through
-  openings rather than the metal; the images AIA takes without a focal-plane
+  stops it, as its metal would stop visible light (measured in the one
+  frame through it without the band that its routine checks carry, during
+  the recovery from the reset of 2026-03-06; redo if the AIA team takes
+  better data); the images AIA takes without a focal-plane
   filter (`304_OPEN`, monitoring the visible light through the entrance
   filters) grow with it, at a constant ratio since 2019; the 304 Å channel
   (same telescope and CCD, aluminum focal-plane filter) has none.
@@ -58,8 +60,10 @@ Roy T. Smart is the corresponding author, then Charles C. Kankelborg.
 - **The archives.** Each of `eclipses` (the ingresses in level 1, binned
   16 x 16, with the 94 Å flat field; the leak is fit flat fielded, since it
   reaches the detector as the EUV does),
-  `noise` (the noon runs, reduced to statistics per region), `filters` (a run
-  through each focal-plane filter on 2026-03-07, reduced the same way),
+  `noise` (the noon runs, reduced to statistics per region), `filters` (the
+  last two frames through the thick focal-plane filter on 2026-03-07, one
+  with the band and one without, averaged per region, and the run through
+  the thin filter after them, reduced the same way as `noise`),
   `entrance` (one image a month without a focal-plane filter, binned
   16 x 16), and `dems` (the six coronal channels at noon, binned to 4.8
   arcsec, with the 94 Å flat field) is built from JSOC by `python -m aia_94_leak_paper.<name> build` (needs
