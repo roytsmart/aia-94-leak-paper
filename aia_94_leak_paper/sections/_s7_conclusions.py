@@ -24,8 +24,8 @@ def conclusions() -> aastex.Section:
     more: the images taken without a focal-plane filter brightened by a factor of
     \entranceGrowth\ since \entranceFirst, and since \entranceSince\ the leak has been a constant
     \entranceRatio\ of them.
-    The focal-plane filter passes a fixed part of that light through openings in or around it,
-    since the thick one attenuates the leak only as much as the \EUV, and 304\,\AA, behind an
+    The thin zirconium focal-plane filter passes a fixed part of that light through its metal:
+    the thick one, with \filterZirconium\ more zirconium, stops the leak, and 304\,\AA, behind an
     aluminum focal-plane filter, has none.
 \item \textbf{Consequences.}
     Left in the data, the leak appears in \DEMs\ as hot plasma outside active regions: on
@@ -38,11 +38,12 @@ def conclusions() -> aastex.Section:
 \item \textbf{What to do.}
     Subtract the model of Section~\ref{sec:ACorrection}, kept current by the eclipse seasons and,
     between them, by the images taken without a focal-plane filter.
-    Observing through the thick focal-plane filter would not help, since it attenuates the leak only
-    as much as the \EUV.
+    Observing through the thick focal-plane filter would stop the leak and keep \filterEUV\ of the
+    \EUV, as long as 304\,\AA\ stays on its thin filter, since the band comes with a move between
+    the two thick filters.
 \item \textbf{For the \AIA\ team.}
-    Why the entrance filters pass more and more visible light, where the openings in the
-    focal-plane filter are, and where the arcs and streaks in the images taken without a
-    focal-plane filter come from.
+    Why the entrance filters pass more and more visible light, what adds the band to the frames of
+    the routine checks of the thick focal-plane filter, and where the arcs and streaks in the
+    images taken without a focal-plane filter come from.
 \end{outline}""")
     return result

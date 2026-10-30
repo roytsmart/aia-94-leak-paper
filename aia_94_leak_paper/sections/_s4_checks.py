@@ -15,17 +15,26 @@ def checks() -> aastex.Section:
     The channel has two focal-plane filters: the thin one it observes through, and a spare with
     \filterZirconium\ more zirconium, in case the thin one develops
     pinholes~\citep{Lemen2012,Boerner2012}.
-    On \filterDate\ the channel observed through the spare until late in the day; the last run of
-    frames through it and the first through the thin filter began \filterGap\ apart.
-    The spare transmits unevenly, passing less toward the top and bottom of the field, and its
-    flat field is that of the thin filter, so the two are compared only within \filterBand\ of the
-    middle of the disk (Figure~\ref{fig:filters}, left).
-    There the spare passes \filterEUV\ of the \EUV, measured from the structure of the corona,
-    where the calibration of the channel expects \filterTable.
-    It passes $\filterLeak \pm \filterLeakSpread$ of the noiseless signal, and \filterLeakSignals\
-    of it from the signals alone (Figure~\ref{fig:filters}, right): it attenuates the leak about as
-    much as the \EUV.
-    So the leak reaches the detector through the focal-plane filter.
+    In the routine checks of the spare, each frame through it is followed by a frame of
+    304\,\AA\ through that channel's thick filter, and each carries a band of extra signal across
+    the middle rows of the detector (Figure~\ref{fig:filters}, left).
+    The band is added as the frame is read out, while the filter wheel moves between the two thick
+    filters: a frame through the spare followed by one through the thin filter of 304\,\AA\ has
+    none (Figure~\ref{fig:filters}, middle).
+    On \filterDate, the day after a reset of the instrument, the channel observed through the
+    spare all day, and its last frame through it was followed by one through the thin filter of
+    304\,\AA.
+    In the frame before, the band reaches \filterBand, about as much as the leak through the thin
+    filter at disk center, \filterNoiseless.
+    The last frame through the spare and the first \filterFrames\ frames through the thin filter,
+    which began \filterGap\ later, are compared within \filterRadius\ of disk center.
+    There the spare passes \filterEUV\ of the \EUV, evenly across the field, measured from the
+    structure of the corona, where the calibration of the channel expects \filterTable.
+    Of the leak, measured from the limb-darkened disk that the frame through the spare lacks, it
+    passes $\filterLeak \pm \filterLeakSpread$, the spread among the quadrants of the detector
+    (Figure~\ref{fig:filters}, right): none of it.
+    \roy{The leak through the spare comes out negative; the noiseless signal through the thin
+    filter may read low, as it does against the eclipses (Section~\ref{sec:EarthEclipses}).}
     Light that crossed the metal of the filter would be attenuated by the extra zirconium by
     $e^{-4\pi k\,\Delta d/\lambda}$, where $k$ is the extinction coefficient of zirconium at the
     wavelength $\lambda$ and $\Delta d$ is the extra thickness.
@@ -35,8 +44,11 @@ def checks() -> aastex.Section:
     transparent, it is at most \filterMetalQuerry\ with the optical constants of
     \citet{Querry1987}, \filterMetalLynch\ with those of \citet{Lynch1975}, and \filterMetalPalm\
     with those of the film of \citet{Palm2018}, the least absorbing of them.
-    Even that is \filterMetalShortfall\ times less than the spare passes of the leak, so the leak
-    passes the filter through openings in it or around it rather than through the metal.
+    So the leak is visible light that crosses the metal of the thin filter, and that the extra
+    zirconium of the spare all but stops.
+    \roy{Redo this comparison if the \AIA\ team can take frames through the spare outside an
+    anomaly of the instrument, each followed by a frame through the thin filter of 304\,\AA: it
+    rests on a single frame, taken the day after a reset.}
 \item \textbf{The entrance filters.}
     The zirconium entrance filters of the channel pass enough visible light to image the
     photosphere, and \AIA\ monitors them with images taken without a focal-plane

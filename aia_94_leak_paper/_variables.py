@@ -84,7 +84,10 @@ def variables() -> list[aastex.Variable]:
     ratios = [(n.rate / k.center).to_value(u.percent) for n, k in measured]
     filters = aia_94_leak_paper.filters
     attenuation = filters.attenuation()
-    gap = filters.load("thin").time - filters.load("thick").time
+    gap = filters.run().time - filters.frame("clean").time
+    # the leak through the thick filter is written to the decimals of its spread
+    leak_spread = _figures(attenuation.leak_spread, digits=1)
+    leak = f"{attenuation.leak:.{len(leak_spread.split('.')[-1])}f}"
     metal = {table: filters.metal_visible(table) for table in filters.tables}
     entrance = aia_94_leak_paper.entrance
     monitor = entrance.load()
@@ -186,27 +189,36 @@ def variables() -> list[aastex.Variable]:
             value=aastex.NoEscape(rf"{_figures(max(ratios))}\%"),
         ),
         # the day the channel observed through its thick focal-plane filter,
-        # how far apart the runs through each filter began, how much more
-        # zirconium the thick filter has, and the band they are compared in
+        # how many frames the run through the thin filter has and how long
+        # after the last frame through the thick one it began, and how much
+        # more zirconium the thick filter has
         aastex.Variable(
             name="filterDate",
             value=aastex.NoEscape(
                 f"{filters.switch:%Y} {filters.switch:%B} {filters.switch.day}"
             ),
         ),
-        aastex.Variable(name="filterGap", value=_measured(gap.to(u.min))),
+        aastex.Variable(name="filterFrames", value=aia_94_leak_paper.noise.frames),
+        aastex.Variable(name="filterGap", value=_measured(gap.to(u.s))),
         aastex.Variable(
             name="filterZirconium",
             value=filters.zirconium["thick"] - filters.zirconium["thin"],
         ),
+        # how far from disk center the filters are compared, the most the band
+        # adds to a frame through the thick filter, and the noiseless signal
+        # through the thin filter at disk center
         aastex.Variable(
-            name="filterBand",
-            value=aastex.NoEscape(rf"\ensuremath{{{filters.band:g}\,R_\odot}}"),
+            name="filterRadius",
+            value=aastex.NoEscape(rf"\ensuremath{{{filters.radius:g}\,R_\odot}}"),
+        ),
+        aastex.Variable(name="filterBand", value=_measured(filters.band_peak())),
+        aastex.Variable(
+            name="filterNoiseless", value=_measured(attenuation.noiseless_center)
         ),
         # how much the thick filter passes, relative to the thin one, of the
         # EUV (from the structure of the corona, and as the calibration
-        # expects) and of the leak (from the noise, with its spread among the
-        # quadrants, and from the signals alone)
+        # expects) and of the leak (from the disk, with its spread among the
+        # quadrants)
         aastex.Variable(
             name="filterEUV",
             value=aastex.NoEscape(rf"\ensuremath{{{_figures(attenuation.euv)}}}"),
@@ -217,24 +229,15 @@ def variables() -> list[aastex.Variable]:
         ),
         aastex.Variable(
             name="filterLeak",
-            value=aastex.NoEscape(rf"\ensuremath{{{_figures(attenuation.leak)}}}"),
+            value=aastex.NoEscape(rf"\ensuremath{{{leak}}}"),
         ),
         aastex.Variable(
             name="filterLeakSpread",
-            value=aastex.NoEscape(
-                rf"\ensuremath{{{_figures(attenuation.leak_spread, digits=1)}}}"
-            ),
-        ),
-        aastex.Variable(
-            name="filterLeakSignals",
-            value=aastex.NoEscape(
-                rf"\ensuremath{{{_figures(attenuation.leak_signals)}}}"
-            ),
+            value=aastex.NoEscape(rf"\ensuremath{{{leak_spread}}}"),
         ),
         # how much the thick filter would pass, relative to the thin one, of
         # light that crossed the metal: of the EUV, and at most of visible
-        # light by each measurement of the optical constants of zirconium,
-        # and how many times less than it passes of the leak that most is
+        # light by each measurement of the optical constants of zirconium
         aastex.Variable(
             name="filterMetalEUV",
             value=aastex.NoEscape(
@@ -258,12 +261,6 @@ def variables() -> list[aastex.Variable]:
         aastex.Variable(
             name="filterMetalPalm",
             value=aastex.NoEscape(rf"\ensuremath{{{_figures(metal['palm'])}}}"),
-        ),
-        aastex.Variable(
-            name="filterMetalShortfall",
-            value=aastex.NoEscape(
-                _figures(attenuation.leak / max(metal.values()), digits=1)
-            ),
         ),
         # the images without a focal-plane filter: the month of the first, the
         # ring they are compared with the leak in, and how much they have
