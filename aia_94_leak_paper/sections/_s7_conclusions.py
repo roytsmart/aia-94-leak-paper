@@ -39,11 +39,9 @@ def conclusions() -> aastex.Section:
     Subtract the model of Section~\ref{sec:ACorrection}, kept current by the eclipse seasons and,
     between them, by the images taken without a focal-plane filter.
     Observing through the thick focal-plane filter would stop the leak and keep \filterEUV\ of the
-    \EUV, as long as 304\,\AA\ stays on its thin filter, since the band comes with a move between
-    the two thick filters.
+    \EUV.
 \item \textbf{For the \AIA\ team.}
-    Why the entrance filters pass more and more visible light, what adds the band to the frames of
-    the routine checks of the thick focal-plane filter, and where the arcs and streaks in the
-    images taken without a focal-plane filter come from.
+    Why the entrance filters pass more and more visible light, and where the arcs and streaks in
+    the images taken without a focal-plane filter come from.
 \end{outline}""")
     return result

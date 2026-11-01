@@ -15,16 +15,14 @@ __all__ = [
 
 def filters() -> aastex.FigureStar:
     """
-    The signal of each frame through the thick focal-plane filter relative
-    to the run through the thin one, and what the thick filter passes of the
-    leak.
+    The signal of the last frame through the thick focal-plane filter
+    relative to the run through the thin one, and how much of the leak the
+    thick filter passes.
     """
     module = aia_94_leak_paper.filters
     noise = aia_94_leak_paper.noise
     thin = module.run()
-    frames = {name: module.frame(name) for name in module.frames}
-    result = module.attenuation()
-    disk = noise.disk(thin)
+    thick = module.frame("clean")
     axes = ("y", "x")
     r = thin.r.ndarray_aligned(axes)
     position = thin.position
@@ -32,86 +30,103 @@ def filters() -> aastex.FigureStar:
     dx, dy = x[1] - x[0], y[1] - y[0]
     extent = [x[0] - dx / 2, x[-1] + dx / 2, y[0] - dy / 2, y[-1] + dy / 2]
 
-    fig, (banded, clean, right) = plt.subplots(
-        ncols=3,
-        figsize=(aastex.text_width_inches, 2.2),
+    fig, (left, right) = plt.subplots(
+        ncols=2,
+        figsize=(aastex.text_width_inches, 2.4),
         constrained_layout=True,
-        gridspec_kw={"width_ratios": [1, 1, 1.15]},
+        gridspec_kw={"width_ratios": [1, 1.2]},
     )
 
-    # each frame through the thick filter over the run through the thin one,
+    # the frame through the thick filter over the run through the thin one,
     # where there is signal enough to see it
-    signal = {
-        name: frame.image.to_value(u.DN).ndarray_aligned(axes)
-        for name, frame in frames.items()
-    }
+    signal_thick = thick.image.to_value(u.DN).ndarray_aligned(axes)
     signal_thin = thin.image.to_value(u.DN).ndarray_aligned(axes)
-    for ax, name in ((banded, "banded"), (clean, "clean")):
-        with np.errstate(divide="ignore", invalid="ignore"):
-            ratio = np.where(r < 1.25, signal[name] / signal_thin, np.nan)
-        im = ax.imshow(
-            ratio,
-            origin="lower",
-            extent=extent,
-            cmap="viridis",
-            vmin=0,
-            vmax=1,
-            interpolation="none",
+    with np.errstate(divide="ignore", invalid="ignore"):
+        ratio = np.where(r < 1.25, signal_thick / signal_thin, np.nan)
+    im = left.imshow(
+        ratio,
+        origin="lower",
+        extent=extent,
+        cmap="viridis",
+        vmin=0,
+        vmax=1,
+        interpolation="none",
+    )
+    left.add_patch(
+        matplotlib.patches.Circle(
+            (0, 0), 1, fill=False, color="white", linewidth=0.5, linestyle="dotted"
         )
-        ax.add_patch(
-            matplotlib.patches.Circle(
-                (0, 0), 1, fill=False, color="white", linewidth=0.5, linestyle="dotted"
-            )
-        )
-        ax.set_xlim(-1.3, 1.3)
-        ax.set_ylim(-1.3, 1.3)
-        ax.set_xlabel(r"$x$ ($R_\odot$)")
-    banded.set_ylabel(r"$y$ ($R_\odot$)")
-    clean.tick_params(labelleft=False)
-    bar = fig.colorbar(im, ax=[banded, clean], shrink=0.85)
+    )
+    left.set_xlim(-1.3, 1.3)
+    left.set_ylim(-1.3, 1.3)
+    left.set_xlabel(r"$x$ ($R_\odot$)")
+    left.set_ylabel(r"$y$ ($R_\odot$)")
+    bar = fig.colorbar(im, ax=left, shrink=0.85)
     bar.set_label("thick / thin")
 
-    # the last frame through the thick filter less the EUV through it, the
-    # median of each ring of the disk, and what it would be if the thick
-    # filter stopped the leak or attenuated it as it does the EUV
+    # how much of the leak the thick filter passes in each region: the EUV
+    # through it, plus what is left of the frame through it once that EUV is
+    # taken away, over the leak through the thin filter, by each measure of
+    # that leak, with the EUV fit with it; the median of each ring, and the
+    # spread of the medians among the quadrants
+    quadrants = [quadrant.ndarray_aligned(axes) for quadrant in noise.quadrants(thin)]
+    styles = {
+        "eclipses": {"color": "tab:blue", "label": "leak from the eclipses"},
+        "noise": {"color": "tab:gray", "mfc": "white", "label": "leak from the noise"},
+    }
+    offset = {"eclipses": 0.008, "noise": -0.008}
     edges = np.arange(0, module.radius + 1e-9, 0.1)
-    middle = (edges[:-1] + edges[1:]) / 2
-    excess = signal["clean"] - result.euv * signal_thin
-    rings = [
-        np.nanmedian(excess[(r >= lo) & (r < hi)])
-        for lo, hi in itertools.pairwise(edges)
-    ]
-    right.plot(middle, rings, "o", color="tab:blue", markersize=4, label="measured")
-    radius = np.linspace(0, module.radius, 101)
-    stopped = -result.euv * disk(radius).to_value(u.DN)
-    right.plot(radius, stopped, color="black", linewidth=0.8, label="leak stopped")
-    right.axhline(
-        0,
-        color="black",
-        linestyle="dashed",
-        linewidth=0.8,
-        label="leak attenuated as the EUV",
-    )
+    right.axhline(1, color="black", linestyle="dashed", linewidth=0.8, label="passed")
+    right.axhline(0, color="black", linewidth=0.8, label="stopped")
+    for measure in module.measures:
+        tau = module.attenuation(measure).euv
+        leak = module.leak_thin(measure).to_value(u.DN).ndarray_aligned(axes)
+        # the leak from the noise is nothing beyond the limb
+        with np.errstate(divide="ignore", invalid="ignore"):
+            passed = tau + (signal_thick - tau * signal_thin) / leak
+        median, spread = [], []
+        for lo, hi in itertools.pairwise(edges):
+            ring = (r >= lo) & (r < hi)
+            median.append(np.nanmedian(passed[ring]))
+            spread.append(np.std([np.nanmedian(passed[ring & q]) for q in quadrants]))
+        right.errorbar(
+            (edges[:-1] + edges[1:]) / 2 + offset[measure],
+            median,
+            spread,
+            fmt="o",
+            markersize=3,
+            elinewidth=0.6,
+            **styles[measure],
+        )
     right.set_xlim(0, module.radius)
-    right.set_ylim(-2, 1)
+    right.set_ylim(-0.4, 1.2)
     right.set_xlabel(r"radius ($R_\odot$)")
-    right.set_ylabel(r"$S_\mathrm{thick} - \tau S_\mathrm{thin}$ (DN)")
-    right.legend(fontsize=7, loc="upper right", handlelength=1.5, labelspacing=0.3)
+    right.set_ylabel("leak, thick / thin")
+    right.legend(
+        fontsize=7,
+        loc="center right",
+        handlelength=1.5,
+        labelspacing=0.3,
+        frameon=False,
+    )
 
     figure = aastex.FigureStar("fig:filters", position="!htb")
     figure.append(aastex.NoEscape(r"\centering"))
     figure.add_fig(fig, width=aastex.NoEscape(r"\textwidth"))
     figure.add_caption(
         aastex.NoEscape(r"""
-The two focal-plane filters of 94\,\AA\ on \filterDate: the last two frames through the thick
-filter, as the channel returned to the thin one, and the first \filterFrames\ frames through the
-thin filter, which began \filterGap\ after the last.
-Left: the first of the two frames through the thick filter, read out as the filter wheel moved to
-the thick filter of 304\,\AA, over the frames through the thin one, in each region of
-$64 \times 64$ pixels; it carries a band across the middle rows of the detector.
-Middle: the same for the last frame, read out as the wheel moved to the thin filter of 304\,\AA.
-Right: the signal of the last frame through the thick filter less $\tau = \filterEUV$ times that
-through the thin one, the median of each ring of $0.1\,R_\odot$ (points), and what it would be if
-the thick filter stopped the leak (solid) or attenuated it as much as the \EUV\ (dashed).""")
+The two focal-plane filters of 94\,\AA\ on \filterDate: the last frame through the thick filter,
+and the first \filterFrames\ frames through the thin one, which began \filterGap\ later.
+Left: the frame through the thick filter over the frames through the thin one, in each region of
+$64 \times 64$ pixels.
+Right: how much of the leak the thick filter passes relative to the thin one, within
+\filterRadius\ of disk center: $\tau$, what it passes of the \EUV, plus the signal through the
+thick filter less $\tau$ times that through the thin one, over the leak through the thin filter, as
+the eclipses that bracket the day measure it (filled; Section~\ref{sec:EarthEclipses}) and as the
+noise of the frames through the thin filter does (open; Section~\ref{sec:PhotonNoise}), with
+$\tau$ fit with each.
+The median of each ring of $0.1\,R_\odot$ (points), the spread of the medians among the quadrants
+of the detector (bars), and what it would be if the thick filter stopped the leak (solid) or passed
+all of it (dashed).""")
     )
     return figure

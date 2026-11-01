@@ -32,25 +32,38 @@ def test_frame(name):
     assert frame.followed == expected[name]
 
 
-def test_band():
-    # the band is about as large as the leak through the thin filter, and
-    # leaves the top and bottom rows of the detector alone
-    peak = filters.band_peak()
-    assert peak > 0.5 * filters.attenuation().noiseless_center
-    band = filters.band().to_value(u.DN).ndarray_aligned(("y", "x"))
-    rows = np.median(band, axis=1)
-    assert np.abs(rows[:4]).max() < peak.value / 10
-    assert np.abs(rows[-4:]).max() < peak.value / 10
+def test_leak_thin():
+    axes = ("y", "x")
+    r = filters.run().r.ndarray_aligned(axes)
+    noise, eclipses = (
+        filters.leak_thin(m).to_value(u.DN).ndarray_aligned(axes)
+        for m in ("noise", "eclipses")
+    )
+    disk = r < 0.9
+    # the noiseless signal reads lower than the leak in the eclipses, as it
+    # does in Section 3, and is nothing beyond the limb, where the point
+    # spread function of the eclipses spreads some of the leak
+    assert 0.5 < np.median(noise[disk] / eclipses[disk]) < 1
+    beyond = (r > 1.05) & (r < 1.15)
+    assert np.all(noise[beyond] == 0)
+    assert np.all(eclipses[beyond] > 0)
 
 
-def test_attenuation():
-    result = filters.attenuation()
+@pytest.mark.parametrize("measure", filters.measures)
+def test_attenuation(measure):
+    result = filters.attenuation(measure)
     # the EUV, measured from the corona, is attenuated as the calibration expects
     assert result.euv == pytest.approx(filters.euv_table, rel=0.1)
     # the leak far more: the thick filter all but stops it
     assert abs(result.leak) < 3 * result.leak_spread
     assert result.leak < result.euv / 4
-    assert result.noiseless_center > 0 * u.DN
+    assert result.center > 0 * u.DN
+
+
+def test_attenuation_euv():
+    # both measures of the leak leave nearly the same EUV
+    euv = [filters.attenuation(m).euv for m in filters.measures]
+    assert euv[0] == pytest.approx(euv[1], abs=0.02)
 
 
 def test_metal():
@@ -59,12 +72,13 @@ def test_metal():
     assert euv == pytest.approx(filters.euv_table, rel=0.02)
     # and would all but stop visible light that crossed it, by every
     # measurement of the constants, passing no less than the thick filter
-    # passes of the leak
-    result = filters.attenuation()
+    # passes of the leak, by either measure of it
+    results = [filters.attenuation(m) for m in filters.measures]
     for table in filters.tables:
         most = filters.metal_visible(table)
-        assert 0 < most < result.euv / 4
-        assert result.leak < most + 3 * result.leak_spread
+        for result in results:
+            assert 0 < most < result.euv / 4
+            assert result.leak < most + 3 * result.leak_spread
         for end in filters.visible:
             assert most >= float(filters.metal(end, table).ndarray)
     # the default of optika is the first of them

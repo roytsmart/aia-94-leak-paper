@@ -83,11 +83,25 @@ def variables() -> list[aastex.Variable]:
     ]
     ratios = [(n.rate / k.center).to_value(u.percent) for n, k in measured]
     filters = aia_94_leak_paper.filters
-    attenuation = filters.attenuation()
+    attenuation = {
+        measure: filters.attenuation(measure) for measure in filters.measures
+    }
     gap = filters.run().time - filters.frame("clean").time
-    # the leak through the thick filter is written to the decimals of its spread
-    leak_spread = _figures(attenuation.leak_spread, digits=1)
-    leak = f"{attenuation.leak:.{len(leak_spread.split('.')[-1])}f}"
+    # the leak through the thick filter is written to the decimals of its
+    # spread, by each measure of the leak through the thin one
+    leak_spread = {
+        measure: _figures(a.leak_spread, digits=1) for measure, a in attenuation.items()
+    }
+    leak = {
+        measure: f"{a.leak:.{len(leak_spread[measure].split('.')[-1])}f}"
+        for measure, a in attenuation.items()
+    }
+    noise_share = attenuation["noise"].center / attenuation["eclipses"].center
+    # the EUV through the thick filter, as fit with each measure of the leak
+    euv = sorted({_figures(a.euv) for a in attenuation.values()})
+    euv = rf"\ensuremath{{{euv[0]}}}" + "".join(
+        rf" to \ensuremath{{{e}}}" for e in euv[1:]
+    )
     metal = {table: filters.metal_visible(table) for table in filters.tables}
     entrance = aia_94_leak_paper.entrance
     monitor = entrance.load()
@@ -204,24 +218,19 @@ def variables() -> list[aastex.Variable]:
             name="filterZirconium",
             value=filters.zirconium["thick"] - filters.zirconium["thin"],
         ),
-        # how far from disk center the filters are compared, the most the band
-        # adds to a frame through the thick filter, and the noiseless signal
-        # through the thin filter at disk center
+        # how far from disk center the filters are compared
         aastex.Variable(
             name="filterRadius",
             value=aastex.NoEscape(rf"\ensuremath{{{filters.radius:g}\,R_\odot}}"),
         ),
-        aastex.Variable(name="filterBand", value=_measured(filters.band_peak())),
-        aastex.Variable(
-            name="filterNoiseless", value=_measured(attenuation.noiseless_center)
-        ),
         # how much the thick filter passes, relative to the thin one, of the
         # EUV (from the structure of the corona, and as the calibration
-        # expects) and of the leak (from the disk, with its spread among the
-        # quadrants)
+        # expects) and of the leak (with its spread among the quadrants), by
+        # the noise and by the eclipses, and the noiseless signal through the
+        # thin filter at disk center as a share of the leak in the eclipses
         aastex.Variable(
             name="filterEUV",
-            value=aastex.NoEscape(rf"\ensuremath{{{_figures(attenuation.euv)}}}"),
+            value=aastex.NoEscape(euv),
         ),
         aastex.Variable(
             name="filterTable",
@@ -229,11 +238,23 @@ def variables() -> list[aastex.Variable]:
         ),
         aastex.Variable(
             name="filterLeak",
-            value=aastex.NoEscape(rf"\ensuremath{{{leak}}}"),
+            value=aastex.NoEscape(rf"\ensuremath{{{leak['noise']}}}"),
         ),
         aastex.Variable(
             name="filterLeakSpread",
-            value=aastex.NoEscape(rf"\ensuremath{{{leak_spread}}}"),
+            value=aastex.NoEscape(rf"\ensuremath{{{leak_spread['noise']}}}"),
+        ),
+        aastex.Variable(
+            name="filterLeakEclipses",
+            value=aastex.NoEscape(rf"\ensuremath{{{leak['eclipses']}}}"),
+        ),
+        aastex.Variable(
+            name="filterLeakEclipsesSpread",
+            value=aastex.NoEscape(rf"\ensuremath{{{leak_spread['eclipses']}}}"),
+        ),
+        aastex.Variable(
+            name="filterNoiseShare",
+            value=aastex.NoEscape(rf"{_figures(noise_share.to_value(u.percent))}\%"),
         ),
         # how much the thick filter would pass, relative to the thin one, of
         # light that crossed the metal: of the EUV, and at most of visible

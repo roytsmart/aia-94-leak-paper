@@ -27,7 +27,9 @@ The leak is measured four independent ways, and each gets its own section:
   stops it, as its metal would stop visible light (measured in the one
   frame through it without the band that its routine checks carry, during
   the recovery from the reset of 2026-03-06; redo if the AIA team takes
-  better data); the images AIA takes without a focal-plane
+  better data), against the leak through the thin filter measured both by
+  the noise of the run after it and by the eclipses that bracket the day;
+  the images AIA takes without a focal-plane
   filter (`304_OPEN`, monitoring the visible light through the entrance
   filters) grow with it, at a constant ratio since 2019; the 304 Å channel
   (same telescope and CCD, aluminum focal-plane filter) has none.
