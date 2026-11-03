@@ -1,5 +1,6 @@
 import astropy.units as u
 import named_arrays as na
+import numpy as np
 import optika
 import pytest
 
@@ -8,38 +9,76 @@ import aia_94_leak_paper
 filters = aia_94_leak_paper.filters
 
 
-@pytest.mark.parametrize("name", filters.filters)
-def test_load(name):
-    run = filters.load(name)
+def test_run():
+    run = filters.run()
     assert run.date == filters.switch.date()
     assert run.count.axes == ("signal", "y", "x")
     assert run.count.sum().ndarray > 1e8
     assert run.exposure > 0 * u.s
 
 
-def test_attenuation():
-    result = filters.attenuation()
+@pytest.mark.parametrize("name", filters.frames)
+def test_frame(name):
+    frame = filters.frame(name)
+    run = filters.run()
+    assert frame.time < run.time
+    # equal to the millisecond, as the frames of a run are
+    assert frame.exposure.to_value(u.s) == pytest.approx(
+        run.exposure.to_value(u.s), abs=1e-3
+    )
+    assert frame.image.axes == ("y", "x")
+    assert frame.image.shape == {a: run.count.shape[a] for a in ("y", "x")}
+    expected = {"clean": "304_THIN", "banded": "304_THICK"}
+    assert frame.followed == expected[name]
+
+
+def test_leak_thin():
+    axes = ("y", "x")
+    r = filters.run().r.ndarray_aligned(axes)
+    noise, eclipses = (
+        filters.leak_thin(m).to_value(u.DN).ndarray_aligned(axes)
+        for m in ("noise", "eclipses")
+    )
+    disk = r < 0.9
+    # the noiseless signal reads lower than the leak in the eclipses, as it
+    # does in Section 3, and is nothing beyond the limb, where the point
+    # spread function of the eclipses spreads some of the leak
+    assert 0.5 < np.median(noise[disk] / eclipses[disk]) < 1
+    beyond = (r > 1.05) & (r < 1.15)
+    assert np.all(noise[beyond] == 0)
+    assert np.all(eclipses[beyond] > 0)
+
+
+@pytest.mark.parametrize("measure", filters.measures)
+def test_attenuation(measure):
+    result = filters.attenuation(measure)
     # the EUV, measured from the corona, is attenuated as the calibration expects
     assert result.euv == pytest.approx(filters.euv_table, rel=0.1)
-    # the leak about as much: visible light through the extra zirconium
-    # would be all but gone
-    assert 0.5 < result.leak < 1
-    assert result.leak == pytest.approx(result.euv, rel=0.2)
-    # the noise and the signals alone agree
-    assert result.leak_signals == pytest.approx(result.leak, abs=0.1)
-    assert result.noiseless_thick < result.noiseless_thin
+    # the leak far more: the thick filter all but stops it
+    assert abs(result.leak) < 3 * result.leak_spread
+    assert result.leak < result.euv / 4
+    assert result.center > 0 * u.DN
+
+
+def test_attenuation_euv():
+    # both measures of the leak leave nearly the same EUV
+    euv = [filters.attenuation(m).euv for m in filters.measures]
+    assert euv[0] == pytest.approx(euv[1], abs=0.02)
 
 
 def test_metal():
     # the extra zirconium attenuates the EUV as the calibration expects
     euv = float(filters.metal(filters.wavelength_euv).ndarray)
     assert euv == pytest.approx(filters.euv_table, rel=0.02)
-    # and would attenuate visible light that crossed it far more than the
-    # thick filter attenuates the leak, by every measurement of the constants
-    leak = filters.attenuation().leak
+    # and would all but stop visible light that crossed it, by every
+    # measurement of the constants, passing no less than the thick filter
+    # passes of the leak, by either measure of it
+    results = [filters.attenuation(m) for m in filters.measures]
     for table in filters.tables:
         most = filters.metal_visible(table)
-        assert 0 < most < leak / 5
+        for result in results:
+            assert 0 < most < result.euv / 4
+            assert result.leak < most + 3 * result.leak_spread
         for end in filters.visible:
             assert most >= float(filters.metal(end, table).ndarray)
     # the default of optika is the first of them

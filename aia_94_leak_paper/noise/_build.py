@@ -63,7 +63,7 @@ is set on every frame of 2026 January 19.
 """
 
 
-def usable(records: list[dict], filter: str = "94_THIN") -> bool:
+def usable(records: list[dict], filter: str = "94_THIN", allowed: int = 0) -> bool:
     """
     Whether a run of 94 Å frames has equal exposures, all through one
     focal-plane filter, and no flags in ``QUALITY`` but :data:`_harmless`.
@@ -76,10 +76,12 @@ def usable(records: list[dict], filter: str = "94_THIN") -> bool:
     filter
         The focal-plane filter every frame must have been taken through, as
         ``WAVE_STR`` names it.
+    allowed
+        Further bits of ``QUALITY`` the frames may have set.
     """
     exposures = {round(float(r["EXPTIME"]), 3) for r in records}
     filters = {r["WAVE_STR"] for r in records}
-    quality = {int(r["QUALITY"]) & ~_harmless for r in records}
+    quality = {int(r["QUALITY"]) & ~(_harmless | allowed) for r in records}
     return len(exposures) == 1 and filters == {filter} and quality == {0}
 
 

@@ -15,8 +15,8 @@ The leak is a sharp, limb-darkened image of the solar disk with a broad halo, an
 visible photon frees a single electron, it adds almost none of the photon noise that an \EUV\
 signal of the same size would.
 It is absent from the 304\,\AA\ channel, which shares the telescope and the detector,
-the thicker of the two focal-plane filters attenuates it only as much as the \EUV, so it passes
-that filter through openings rather than through the metal,
+the thicker of the two focal-plane filters stops it, as its extra zirconium would stop visible
+light,
 and it can be seen directly as \SDO\ passes into the shadow of the Earth, where it sets
 \sunsetDelay\ after the \EUV\ has been absorbed, flattened by refraction like a sunset.
 In \numEclipses\ such eclipses between \yearFirst\ and \yearLast, the leak at disk center grew

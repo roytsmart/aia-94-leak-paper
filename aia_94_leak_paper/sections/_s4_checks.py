@@ -15,17 +15,21 @@ def checks() -> aastex.Section:
     The channel has two focal-plane filters: the thin one it observes through, and a spare with
     \filterZirconium\ more zirconium, in case the thin one develops
     pinholes~\citep{Lemen2012,Boerner2012}.
-    On \filterDate\ the channel observed through the spare until late in the day; the last run of
-    frames through it and the first through the thin filter began \filterGap\ apart.
-    The spare transmits unevenly, passing less toward the top and bottom of the field, and its
-    flat field is that of the thin filter, so the two are compared only within \filterBand\ of the
-    middle of the disk (Figure~\ref{fig:filters}, left).
-    There the spare passes \filterEUV\ of the \EUV, measured from the structure of the corona,
-    where the calibration of the channel expects \filterTable.
-    It passes $\filterLeak \pm \filterLeakSpread$ of the noiseless signal, and \filterLeakSignals\
-    of it from the signals alone (Figure~\ref{fig:filters}, right): it attenuates the leak about as
-    much as the \EUV.
-    So the leak reaches the detector through the focal-plane filter.
+    On \filterDate, the day after a reset of the instrument, the channel observed through the
+    spare all day.
+    All but the last of its frames through the spare carry an artifact across the middle rows of
+    the detector, so that frame and the first \filterFrames\ frames through the thin filter, which
+    began \filterGap\ later, are compared within \filterRadius\ of disk center
+    (Figure~\ref{fig:filters}, left).
+    There the spare passes \filterEUV\ of the \EUV, evenly across the field, measured from the
+    structure of the corona with each measure of the leak below, where the calibration of the
+    channel expects \filterTable.
+    Of the leak, measured as the part of the signal through the thin filter that the frame through
+    the spare lacks beyond the \EUV, it passes $\filterLeakEclipses \pm \filterLeakEclipsesSpread$
+    of the leak in the eclipses that bracket the day (Section~\ref{sec:EarthEclipses}), the spread
+    among the quadrants of the detector, and $\filterLeak \pm \filterLeakSpread$ of the noiseless
+    signal of the frames through the thin filter, which here is \filterNoiseShare\ of the leak in
+    the eclipses (Figure~\ref{fig:filters}, right): by either measure, next to none of it.
     Light that crossed the metal of the filter would be attenuated by the extra zirconium by
     $e^{-4\pi k\,\Delta d/\lambda}$, where $k$ is the extinction coefficient of zirconium at the
     wavelength $\lambda$ and $\Delta d$ is the extra thickness.
@@ -35,8 +39,10 @@ def checks() -> aastex.Section:
     transparent, it is at most \filterMetalQuerry\ with the optical constants of
     \citet{Querry1987}, \filterMetalLynch\ with those of \citet{Lynch1975}, and \filterMetalPalm\
     with those of the film of \citet{Palm2018}, the least absorbing of them.
-    Even that is \filterMetalShortfall\ times less than the spare passes of the leak, so the leak
-    passes the filter through openings in it or around it rather than through the metal.
+    So the leak is visible light that crosses the metal of the thin filter, and that the extra
+    zirconium of the spare all but stops.
+    \roy{Redo this comparison if the \AIA\ team can take more frames through the spare outside an
+    anomaly of the instrument: it rests on a single frame, taken the day after a reset.}
 \item \textbf{The entrance filters.}
     The zirconium entrance filters of the channel pass enough visible light to image the
     photosphere, and \AIA\ monitors them with images taken without a focal-plane

@@ -2,39 +2,35 @@
 How much of the leak, and of the EUV, the thick focal-plane filter passes
 relative to the thin one.
 
-The thick filter does not transmit evenly over the field: relative to the
-thin one, the signal through it falls toward the top and bottom of the
-detector. Its flat field is that of the thin filter, so the level-1 images
-do not correct for this, and the two filters are compared only within a
-band across the middle of the disk, :data:`band`, where the thick one
-transmits evenly.
-
-Within the band, the noiseless signal of each run,
-:func:`aia_94_leak_paper.noise.noiseless`, measures the leak through each
-filter. The EUV through each is measured from the structure of the corona:
-across the regions of the band, the signal through the thick filter is fit
-as a multiple :math:`\\tau` of the signal through the thin one plus a
-limb-darkened disk,
+The frame through the thick filter, :func:`aia_94_leak_paper.filters.frame`,
+is compared with the run through the thin filter after it,
+:func:`aia_94_leak_paper.filters.run`, over the disk. Across its regions, the
+signal through the thick filter is fit as a multiple :math:`\\tau` of the
+signal through the thin one plus a multiple of the leak through the thin
+one, :math:`L`,
 
 .. math::
 
-    S_\\mathrm{thick} = \\tau S_\\mathrm{thin} + c \\left[ 1 - u (1 - \\mu) \\right],
+    S_\\mathrm{thick} = \\tau S_\\mathrm{thin} + c L,
 
-where the disk, with the limb darkening :math:`u` of the leak through the
-thin filter, takes up whatever the thick filter does to the leak beyond
-what it does to the EUV. The structure of the corona fixes :math:`\\tau`,
-the attenuation of the EUV, and :math:`c` gives the attenuation of the leak
-from the signals alone, :math:`\\tau + c / p_\\mathrm{thin}`.
+where :math:`c L` takes up whatever the thick filter does to the leak
+beyond what it does to the EUV. The structure of the corona fixes
+:math:`\\tau`, the attenuation of the EUV, and the attenuation of the leak
+is :math:`\\tau + c`. A single frame has no noise of its own to measure,
+so this is the only measure of the leak through the thick filter. The leak
+through the thin one, :func:`leak_thin`, is measured two ways,
+:data:`measures`: by the noise of the run, and by the eclipses that bracket
+the day.
 
 Light that crossed the metal of the filters would be attenuated by the
 extra zirconium of the thick one, :func:`metal`, which the optical
-constants of zirconium give at any wavelength. In the EUV this is what the
-calibration expects, and in the visible it is far less than the thick
-filter passes of the leak, by every measurement of the constants,
-:data:`tables`.
+constants of zirconium give at any wavelength: in the EUV as the
+calibration expects, and in the visible almost entirely, by every
+measurement of the constants, :data:`tables`.
 """
 
 import dataclasses
+import itertools
 
 import astropy.units as u
 import named_arrays as na
@@ -46,25 +42,26 @@ import aia_94_leak_paper
 __all__ = [
     "Attenuation",
     "attenuation",
-    "band",
     "euv_table",
+    "leak_thin",
+    "measures",
     "metal",
     "metal_visible",
+    "radius",
     "tables",
     "visible",
     "wavelength_euv",
-    "within",
     "zirconium",
 ]
 
-band: float = 0.45
-"""
-Half the height of the band across the disk, in solar radii, within which
-the thick filter transmits evenly.
-"""
+radius: float = 0.9
+"""Regions within this distance of disk center, in solar radii, are compared; nearer the limb they straddle it."""
 
-_radius = 0.9
-"""Regions of the band within this distance of disk center are compared; nearer the limb they straddle it."""
+measures: tuple[str, ...] = ("noise", "eclipses")
+"""
+The measures of the leak through the thin filter on the day, :func:`leak_thin`:
+the noise of the run through it, and the eclipses that bracket the day.
+"""
 
 zirconium: dict[str, u.Quantity] = {"thin": 2000 * u.AA, "thick": 3000 * u.AA}
 """
@@ -105,26 +102,20 @@ of Palm et al. (2018), the least absorbing of them.
 class Attenuation:
     """
     How much the thick focal-plane filter passes relative to the thin one,
-    within :data:`band`.
+    over the disk.
     """
 
     leak: float
-    """The noiseless signal through the thick filter over that through the thin one."""
+    """The attenuation of the leak, :math:`\\tau + c`."""
 
     leak_quadrants: np.ndarray
-    """The same, in each quadrant of the detector."""
-
-    leak_signals: float
-    """The same, from the signals alone, :math:`\\tau + c / p_\\mathrm{thin}`."""
+    """The same, fit in each quadrant of the detector."""
 
     euv: float
     """The attenuation of the EUV, :math:`\\tau`, from the structure of the corona."""
 
-    noiseless_thin: u.Quantity
-    """The median noiseless signal through the thin filter, :math:`p_\\mathrm{thin}`."""
-
-    noiseless_thick: u.Quantity
-    """The median noiseless signal through the thick filter."""
+    center: u.Quantity
+    """The leak through the thin filter at disk center, the median within a tenth of a radius."""
 
     @property
     def leak_spread(self) -> float:
@@ -132,57 +123,143 @@ class Attenuation:
         return float(np.std(self.leak_quadrants))
 
 
-def within(run: "aia_94_leak_paper.noise.Run") -> np.ndarray:
+def _fit(
+    thin: np.ndarray,
+    thick: np.ndarray,
+    leak: np.ndarray,
+) -> tuple[float, float]:
     """
-    Which regions of a run are compared: those of the band within
-    :data:`_radius` of disk center, as a boolean array with the axes ``y`` and ``x``.
+    The attenuation of the EUV, :math:`\\tau`, and the multiple :math:`c` of
+    the leak through the thin filter, fit to the signals of some regions.
+
+    Parameters
+    ----------
+    thin
+        The signal of each region through the thin filter.
+    thick
+        The signal of each region through the thick filter.
+    leak
+        The leak through the thin filter in each region.
+    """
+    design = np.stack([thin, leak], axis=-1)
+    (tau, c), *_ = np.linalg.lstsq(design, thick, rcond=None)
+    return float(tau), float(c)
+
+
+def _leak_eclipses(run: "aia_94_leak_paper.noise.Run") -> np.ndarray:
+    """
+    The leak through the thin filter on the day, in the units of the detector
+    per frame, in each region of the run, from the two eclipses that bracket
+    the day.
+
+    The leak of each eclipse, in level 1, is grown to the day along the
+    exponential of the eclipses and taken as a profile in rings of a
+    hundredth of a radius, out to 1.3 radii, since the Sun is not the same
+    size in each. It is then multiplied by the flat field in each region,
+    which is fixed to the detector, the mean of the flat fields of the two
+    eclipses, to put it in the units of the detector, as the run is.
 
     Parameters
     ----------
     run
-        A run, as :func:`aia_94_leak_paper.filters.load` gives it.
+        The run through the thin filter, :func:`aia_94_leak_paper.filters.run`.
     """
-    where = (np.abs(run.position.y) < band) & (run.r < _radius)
-    return where.ndarray_aligned(("y", "x"))
+    eclipses = aia_94_leak_paper.eclipses
+    day = aia_94_leak_paper.filters.switch.date()
+    doubling = eclipses.growth(eclipses.history()).doubling
+    edges = np.linspace(0, 1.3, 131)
+    middle = (edges[:-1] + edges[1:]) / 2
+    axes = ("y", "x")
+    shape = run.r.shape
+    profiles, flats = [], []
+    for date in (
+        max(d for d in eclipses.dates if d <= day),
+        min(d for d in eclipses.dates if d >= day),
+    ):
+        eclipse = eclipses.load(date)
+        growth = 2 ** ((day - date).days * u.day / doubling).to_value(u.one)
+        # the leak with the whole disk up, in level 1
+        seen = eclipses.seen(date) / eclipse.flat_center * run.exposure * growth
+        seen = seen.to_value(u.DN).ndarray_aligned(axes)
+        position = eclipse.position
+        distance = np.sqrt(np.square(position.x) + np.square(position.y))
+        distance = distance.ndarray_aligned(axes)
+        profiles.append(
+            [
+                np.nanmedian(seen[(distance >= lo) & (distance < hi)])
+                for lo, hi in itertools.pairwise(edges)
+            ]
+        )
+        # the bins of the eclipses tile the regions of the run
+        flat = eclipse.flat.ndarray_aligned(axes)
+        ny, nx = (flat.shape[i] // shape[a] for i, a in enumerate(axes))
+        flats.append(
+            flat.reshape(shape["y"], ny, shape["x"], nx).mean(axis=(1, 3)),
+        )
+    r = run.r.ndarray_aligned(axes)
+    level_1 = np.interp(r, middle, np.mean(profiles, axis=0), right=np.nan)
+    return level_1 * np.mean(flats, axis=0)
 
 
-def attenuation() -> Attenuation:
-    """How much the thick focal-plane filter passes of the leak and of the EUV, relative to the thin one."""
+def leak_thin(measure: str = "noise") -> na.ScalarArray:
+    """
+    The leak through the thin filter in each region of the run through it,
+    per frame.
+
+    Parameters
+    ----------
+    measure
+        One of :data:`measures`: ``"noise"``, the limb-darkened disk of the
+        noiseless signal of the run, :func:`aia_94_leak_paper.noise.disk`,
+        which is nothing beyond the limb; or ``"eclipses"``, the leak in the
+        eclipses that bracket the day, through the point spread function of
+        the eclipses, which spreads some of it beyond the limb.
+    """
+    thin = aia_94_leak_paper.filters.run()
+    axes = ("y", "x")
+    r = thin.r.ndarray_aligned(axes)
+    if measure == "noise":
+        disk = aia_94_leak_paper.noise.disk(thin)
+        inside = disk(np.clip(r, 0, 1)).to_value(u.DN)
+        leak = np.where(r < 1, inside, 0)
+    elif measure == "eclipses":
+        leak = _leak_eclipses(thin)
+    else:  # pragma: no cover
+        raise ValueError(f"measure must be one of {measures}, got {measure!r}")
+    return na.ScalarArray(leak, axes=axes) << u.DN
+
+
+def attenuation(measure: str = "noise") -> Attenuation:
+    """
+    How much the thick focal-plane filter passes of the leak and of the EUV, relative to the thin one.
+
+    Parameters
+    ----------
+    measure
+        The measure of the leak through the thin filter, one of :data:`measures`.
+    """
     filters = aia_94_leak_paper.filters
     noise = aia_94_leak_paper.noise
-    thin, thick = filters.load("thin"), filters.load("thick")
+    thin = filters.run()
     axes = ("y", "x")
-    use = within(thin)
-    p = {
-        name: noise.noiseless(run).to_value(u.DN).ndarray_aligned(axes)
-        for name, run in (("thin", thin), ("thick", thick))
-    }
-    s = {
-        name: run.image.to_value(u.DN).ndarray_aligned(axes)
-        for name, run in (("thin", thin), ("thick", thick))
-    }
-    p_thin = np.nanmedian(p["thin"][use])
-    p_thick = np.nanmedian(p["thick"][use])
+    s_thin = thin.image.to_value(u.DN).ndarray_aligned(axes)
+    s_thick = filters.frame("clean").image.to_value(u.DN).ndarray_aligned(axes)
+    leak = leak_thin(measure).to_value(u.DN).ndarray_aligned(axes)
+    r = thin.r.ndarray_aligned(axes)
+    use = (r < radius) & np.isfinite(s_thin) & np.isfinite(s_thick)
+
+    tau, c = _fit(s_thin[use], s_thick[use], leak[use])
     quadrants = []
     for quadrant in noise.quadrants(thin):
         w = use & quadrant.ndarray_aligned(axes)
-        quadrants.append(np.nanmedian(p["thick"][w]) / np.nanmedian(p["thin"][w]))
-
-    # the EUV from the structure of the corona, and the leak from the disk
-    r = thin.r.ndarray_aligned(axes)
-    ok = use & np.isfinite(s["thin"]) & np.isfinite(s["thick"])
-    mu = np.sqrt(1 - np.square(r[ok]))
-    limb_darkening = noise.disk(thin).limb_darkening
-    design = np.stack([s["thin"][ok], 1 - limb_darkening * (1 - mu)], axis=-1)
-    (tau, c), *_ = np.linalg.lstsq(design, s["thick"][ok], rcond=None)
+        tau_q, c_q = _fit(s_thin[w], s_thick[w], leak[w])
+        quadrants.append(tau_q + c_q)
 
     return Attenuation(
-        leak=float(p_thick / p_thin),
+        leak=tau + c,
         leak_quadrants=np.array(quadrants),
-        leak_signals=float(tau + c / p_thin),
-        euv=float(tau),
-        noiseless_thin=p_thin * u.DN,
-        noiseless_thick=p_thick * u.DN,
+        euv=tau,
+        center=np.median(leak[r < 0.1]) * u.DN,
     )
 
 

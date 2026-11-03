@@ -1,9 +1,10 @@
 """
-Rebuild the archive of the noise of AIA 94 Å through each of its
-focal-plane filters from JSOC.
+Rebuild the archive of AIA 94 Å through each of its focal-plane filters
+from JSOC.
 
-``python -m aia_94_leak_paper.filters build`` writes one FITS file per
-filter of :data:`aia_94_leak_paper.filters.filters`, and
+``python -m aia_94_leak_paper.filters build`` writes one FITS file for the
+run through the thin filter and one for each frame through the thick filter,
+:data:`aia_94_leak_paper.filters.frames`, and
 ``python -m aia_94_leak_paper.filters pack`` bundles them into the tar file
 published as a release asset, printing its SHA-256 digest for
 :data:`aia_94_leak_paper.filters.sha256`. Building needs ``drms``
@@ -59,9 +60,9 @@ def main() -> None:
     elif args.command == "pack":
         tar = args.output / "aia-94-filters.tar"
         with tarfile.open(tar, "w") as t:
-            for name in filters.filters:
-                file = f"aia94_noise_{name}.fits"
-                t.add(args.output / file, arcname=file)
+            names = ["aia94_noise_thin"] + [f"aia94_frame_{n}" for n in filters.frames]
+            for name in names:
+                t.add(args.output / f"{name}.fits", arcname=f"{name}.fits")
         digest = hashlib.sha256(tar.read_bytes()).hexdigest()
         print(f"{tar}: {tar.stat().st_size / 2**20:.1f} MiB, SHA-256 {digest}")
 
