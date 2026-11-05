@@ -16,8 +16,11 @@ def introduction() -> aastex.Section:
     corrected empirically against \EVE~\citep{Woods2012, Boerner2014}.
 \item \textbf{What depends on it.}
     It is the main constraint on hot plasma in \DEM\ inversions~\citep{Hannah2012, Plowman2013,
-    Cheung2015, Morgan2019, Plowman2020}, and maps of \FeXVIII\ are made by subtracting the cool
-    part of it predicted from the other channels~\citep{Warren2012, DelZanna2013}.
+    Cheung2015, Morgan2019, Plowman2020}, though its cool lines often dominate it, so the hot
+    plasma an inversion finds is uncertain in proportion to the cool emission along the line of
+    sight~\citep{Athiray2024}.
+    Maps of \FeXVIII\ are made by subtracting that cool part, predicted from the other
+    channels~\citep{Warren2012, DelZanna2013}.
 \item \textbf{Calibration over the mission.}
     The degradation of each channel is tracked against \EVE\ and its successors~\citep{Boerner2012,
     Boerner2014, DosSantos2021} and distributed in \texttt{aiapy}~\citep{Barnes2020}.
@@ -35,11 +38,9 @@ def introduction() -> aastex.Section:
     holds a thicker spare in case the thin filter develops pinholes~\citep{Lemen2012}.
 \item \textbf{Symptoms already in the literature.}
     In coronal holes the 94\,\AA\ signal matches what remains behind an occulter, and was taken
-    for stray light~\citep{Saqri2020, Heinemann2021}.
+    for stray light or noise~\citep{Saqri2020, Heinemann2021}.
     A survey of quiet-Sun \DEMs\ ended in 2018 because the reconstructions after it were
     poor~\citep{Purkhart2022}, and some inversions drop the channel~\citep{Hofmeister2025}.
-    Coronal holes lose their contrast in it~\citep{Lezzi2023}, and it is brighter than a
-    \DEM\ constrained in X-rays allows~\citep{Athiray2024}.
 \item \textbf{Roadmap.}
     Section~\ref{sec:PhotonNoise} finds a signal in the channel that carries no photon noise,
     Section~\ref{sec:EarthEclipses} sees it alone in eclipses and measures its history over the
